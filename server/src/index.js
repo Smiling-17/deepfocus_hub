@@ -23,8 +23,9 @@ app.set("trust proxy", 1);
 /* ------------------------ CORS (hỗ trợ nhiều origin) ------------------------ */
 const allowList = (process.env.CLIENT_ORIGIN || "")
   .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
+  .map((s) => s.trim())
+  .filter(Boolean)
+  .map((origin) => origin.replace(/\/$/, ""));
 
 // đảm bảo proxy/CDN cache an toàn theo Origin
 app.use((_, res, next) => {
@@ -36,7 +37,8 @@ const corsOptions = {
   origin(origin, cb) {
     // Cho phép request không có Origin (curl, server-to-server)
     if (!origin) return cb(null, true);
-    if (allowList.includes(origin)) return cb(null, true);
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (allowList.includes(normalizedOrigin)) return cb(null, true);
     // KHÔNG ném error để tránh 500 ở preflight
     return cb(null, false);
   },
