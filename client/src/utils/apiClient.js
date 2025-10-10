@@ -1,12 +1,25 @@
 import axios from "axios";
 
+// const baseURL = (() => {
+//   const envUrl = import.meta.env.VITE_API_URL;
+//   if (envUrl) {
+//     return envUrl.replace(/\/$/, "");
+//   }
+//   return "http://localhost:5000/api";
+// })();
+
 const baseURL = (() => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) {
-    return envUrl.replace(/\/$/, "");
-  }
+  // Ưu tiên env (local/dev)
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  if (envUrl) return envUrl.replace(/\/$/, "");
+
+  // Mặc định production: dùng proxy qua Vercel
+  if (typeof window !== "undefined") return "/api";
+
+  // Fallback cho SSR/tooling
   return "http://localhost:5000/api";
 })();
+
 
 export const apiClient = axios.create({
   baseURL,
