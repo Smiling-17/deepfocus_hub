@@ -3,51 +3,73 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 
 /**
- * Lấy JWT từ request: ưu tiên Authorization: Bearer <token>,
- * fallback cookie 'token' (nếu bạn set cookie khi đăng nhập).
+ * Lấy JWT từ Authorization header hoặc cookie header (không phụ thuộc cookie-parser)
  */
 function extractToken(req) {
-  const auth = req.headers.authorization || "";
-  if (auth.startsWith("Bearer ")) return auth.slice(7).trim();
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7).trim();
+  }
 
-  // Nếu bạn không dùng cookie cho auth thì dòng dưới vẫn an toàn (sẽ undefined)
-  return req.cookies?.token || null;
+  if (req.cookies?.token) {
+    return req.cookies.token;
+  }
+
+  const cookieHeader = req.headers.cookie;
+  if (cookieHeader) {
+    const tokenPair = cookieHeader
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith("token="));
+    if (tokenPair) {
+      return decodeURIComponent(tokenPair.split("=")[1] || "");
+    }
+  }
+
+  return null;
 }
 
 export const protect = async (req, res, next) => {
   try {
-    // ✅ Không kiểm tra token cho preflight
-    if (req.method === "OPTIONS") return next();
+    if (req.method === "OPTIONS") {
+      return next();
+    }
 
     const token = extractToken(req);
     if (!token) {
-      return res.status(401).json({ message: "Bạn cần đăng nhập để tiếp tục." });
+      return res
+        .status(401)
+        .json({ message: "Bạn cần đăng nhập để tiếp tục." });
     }
 
-    // Xác thực token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch {
-      return res.status(401).json({ message: "Phiên đăng nhập đã hết hạn hoặc không hợp lệ." });
+    } catch (error) {
+      return res
+        .status(401)
+        .json({ message: "Phiên đăng nhập đã hết hạn hoặc không hợp lệ." });
     }
 
-    // Chấp nhận nhiều khóa id trong payload
-    const userId = decoded?.userId || decoded?.id || decoded?._id || decoded?.sub;
+    const userId =
+      decoded?.userId || decoded?.id || decoded?._id || decoded?.sub;
     if (!userId) {
-      return res.status(401).json({ message: "Token không chứa user id hợp lệ." });
+      return res
+        .status(401)
+        .json({ message: "Token không chứa user id hợp lệ." });
     }
 
-    // Tải user
     const user = await User.findById(userId).select("-password");
     if (!user) {
-      return res.status(401).json({ message: "Phiên đăng nhập không hợp lệ." });
+      return res
+        .status(401)
+        .json({ message: "Phiên đăng nhập không hợp lệ." });
     }
 
     req.user = user;
     return next();
-  } catch (err) {
-    return next(err);
+  } catch (error) {
+    return next(error);
   }
 };
 
