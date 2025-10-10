@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -16,14 +17,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-/* ------------------------ CORS (hỗ trợ nhiều origin) ----------------------- */
+/* -------------------- BẮT BUỘC khi chạy sau proxy (Render) -------------------- */
+app.set("trust proxy", 1);
+
+/* ------------------------ CORS (hỗ trợ nhiều origin) ------------------------ */
 const allowList = (process.env.CLIENT_ORIGIN || "")
   .split(",")
-  .map((s) => s.trim())
+  .map(s => s.trim())
   .filter(Boolean);
 
-// đảm bảo proxy cache theo Origin an toàn
-app.use((req, res, next) => {
+// đảm bảo proxy/CDN cache an toàn theo Origin
+app.use((_, res, next) => {
   res.header("Vary", "Origin");
   next();
 });
@@ -33,7 +37,8 @@ const corsOptions = {
     // Cho phép request không có Origin (curl, server-to-server)
     if (!origin) return cb(null, true);
     if (allowList.includes(origin)) return cb(null, true);
-    return cb(new Error("Not allowed by CORS"));
+    // KHÔNG ném error để tránh 500 ở preflight
+    return cb(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -41,14 +46,21 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// nếu cần, bật preflight cho mọi route
+// xử lý preflight cho mọi route
 app.options("*", cors(corsOptions));
 
 /* ------------------------------- Middlewares ------------------------------- */
-app.use(express.json({ limit: "1mb" })); // parse JSON body
+app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
+
+// Nếu vẫn còn OPTIONS lọt xuống dưới, trả 204 để không đi qua middleware khác
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 /* --------------------------------- Routes --------------------------------- */
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.json({ message: "DeepFocus Hub API đang hoạt động." });
 });
 
@@ -77,10 +89,10 @@ const startServer = async () => {
 
 startServer();
 
-// Bắt các lỗi không được catch để tránh crash âm thầm
-process.on("unhandledRejection", (err) => {
+/* --------- Bắt các lỗi không được catch để tránh crash âm thầm --------- */
+process.on("unhandledRejection", err => {
   console.error("Unhandled Rejection:", err);
 });
-process.on("uncaughtException", (err) => {
+process.on("uncaughtException", err => {
   console.error("Uncaught Exception:", err);
 });
