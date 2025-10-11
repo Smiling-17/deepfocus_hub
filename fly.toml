@@ -1,0 +1,30 @@
+# Đổi "deepfocus-hub-api" thành tên ứng dụng Fly duy nhất của bạn trước khi deploy
+app = "deepfocus-hub-api"
+primary_region = "sin"
+
+[build]
+  dockerfile = "server/Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "15s"
+    method = "GET"
+    path = "/"
+    protocol = "http"
+    timeout = "5s"

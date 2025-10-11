@@ -126,14 +126,25 @@ npm run dev                      # chạy Vite tại http://localhost:5173
 ## 🌐 Triển khai (chỉ dẫn nhanh)
 
 1. **MongoDB Atlas**: tạo cluster, lấy URI, whiltelist IP.
-2. **Backend** (Render):
-   - Build: `npm install`
-   - Start: `npm run start`
-   - Env: `MONGODB_URI`, `PORT`, `JWT_SECRET`, `CLIENT_ORIGIN`, `OPENAI_API_KEY`
+2. **Backend**  
+   - **Render (hiện tại):**
+     - Build: `npm install`
+     - Start: `npm run start`
+     - Env: `MONGODB_URI`, `PORT`, `JWT_SECRET`, `CLIENT_ORIGIN`, `OPENAI_API_KEY`
+   - **Fly.io (đề xuất mới):**
+     - Cài `flyctl`: https://fly.io/docs/hands-on/install-flyctl/
+     - Đăng nhập: `fly auth login`
+     - Đổi tên app trong `fly.toml` cho duy nhất (`app = "deepfocus-hub-api"` → tên của bạn)
+     - Tạo secrets:  
+       `fly secrets set MONGODB_URI=... JWT_SECRET=... CLIENT_ORIGIN="https://deepfocushub-smiling.vercel.app" OPENAI_API_KEY=...`
+     - Triển khai: `fly deploy`
+     - Domain mặc định: `https://<app-name>.fly.dev`
+     - Nếu muốn máy chủ luôn chạy: tham số đã đặt `min_machines_running = 1`
 3. **Frontend** (Vercel):
    - Build: `npm run build`
    - Output: `dist`
    - Env: `VITE_API_URL=https://<backend-domain>/api`
+   - Khi chuyển sang Fly.io, cập nhật `client/vercel.json` để rewrite `/api` → `https://<app-name>.fly.dev/api/:path*`
 4. Cập nhật `.env` local nếu thay đổi domain.
 
 ---
