@@ -4,7 +4,6 @@ primary_region = "sin"
 
 [build]
   dockerfile = "server/Dockerfile"
-  context = "server"
 
 [env]
   NODE_ENV = "production"
