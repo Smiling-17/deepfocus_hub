@@ -1,9 +1,13 @@
 import axios from "axios";
 
 const baseURL = (() => {
-  // Force sử dụng relative path cho production để tận dụng Vercel rewrite
   if (import.meta.env.PROD) {
-    console.log("🌐 Production mode - using relative path /api");
+    const prodUrl = import.meta.env.VITE_API_URL?.trim();
+    if (prodUrl) {
+      console.log("🌐 Production mode - using VITE_API_URL:", prodUrl);
+      return prodUrl.replace(/\/$/, "");
+    }
+    console.log("🌐 Production mode - fallback to /api");
     return "/api";
   }
   
