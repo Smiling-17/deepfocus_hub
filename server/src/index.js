@@ -27,6 +27,17 @@ const allowList = (process.env.CLIENT_ORIGIN || "")
   .filter(Boolean)
   .map((origin) => origin.replace(/\/$/, ""));
 
+// Thêm các origin mặc định nếu không có CLIENT_ORIGIN
+const defaultOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173", 
+  "https://deepfocushub-smiling.vercel.app"
+];
+
+const allAllowedOrigins = allowList.length > 0 ? allowList : defaultOrigins;
+
+console.log("🌐 Allowed CORS origins:", allAllowedOrigins);
+
 // đảm bảo proxy/CDN cache an toàn theo Origin
 app.use((_, res, next) => {
   res.header("Vary", "Origin");
@@ -38,7 +49,8 @@ const corsOptions = {
     // Cho phép request không có Origin (curl, server-to-server)
     if (!origin) return cb(null, true);
     const normalizedOrigin = origin.replace(/\/$/, "");
-    if (allowList.includes(normalizedOrigin)) return cb(null, true);
+    if (allAllowedOrigins.includes(normalizedOrigin)) return cb(null, true);
+    console.log("❌ CORS blocked origin:", normalizedOrigin);
     // KHÔNG ném error để tránh 500 ở preflight
     return cb(null, false);
   },
@@ -57,13 +69,22 @@ app.use(cookieParser());
 
 // Nếu vẫn còn OPTIONS lọt xuống dưới, trả 204 để không đi qua middleware khác
 app.use((req, res, next) => {
-  if (req.method === "OPTIONS") return res.sendStatus(204);
+  if (req.method === "OPTIONS") {
+    console.log("🔄 Handling OPTIONS request for:", req.path);
+    return res.sendStatus(204);
+  }
   next();
 });
 
 /* --------------------------------- Routes --------------------------------- */
 app.get("/", (_req, res) => {
   res.json({ message: "DeepFocus Hub API đang hoạt động." });
+});
+
+// Debug middleware để log tất cả requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.get('Origin') || 'none'}`);
+  next();
 });
 
 app.use("/api/users", authRoutes);

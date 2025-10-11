@@ -5,6 +5,10 @@ const baseURL = (() => {
   if (envUrl) {
     return envUrl.replace(/\/$/, "");
   }
+  // Sử dụng relative path khi deploy trên Vercel để tận dụng rewrite
+  if (import.meta.env.PROD) {
+    return "/api";
+  }
   return "http://localhost:5000/api";
 })();
 
