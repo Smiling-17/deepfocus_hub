@@ -1,16 +1,18 @@
 import axios from "axios";
 
 const baseURL = (() => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) {
-    return envUrl.replace(/\/$/, "");
-  }
-  // Sử dụng relative path khi deploy trên Vercel để tận dụng rewrite
+  // Force sử dụng relative path cho production để tận dụng Vercel rewrite
   if (import.meta.env.PROD) {
+    console.log("🌐 Production mode - using relative path /api");
     return "/api";
   }
+  
+  // Development mode - sử dụng localhost
+  console.log("🏠 Development mode - using localhost");
   return "http://localhost:5000/api";
 })();
+
+console.log("🚀 Final baseURL:", baseURL);
 
 export const apiClient = axios.create({
   baseURL,
