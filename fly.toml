@@ -1,5 +1,5 @@
 # Đổi "deepfocus-hub-api" thành tên ứng dụng Fly duy nhất của bạn trước khi deploy
-app = "deepfocus-hub-api"
+app = "deepfocus-hub"
 primary_region = "sin"
 
 [build]
