@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: deepfocus-hub-api
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        value: http://localhost:5173,https://deepfocushub-smiling.vercel.app
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

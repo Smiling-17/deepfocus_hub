@@ -55,8 +55,7 @@
 | Database        | MongoDB (Atlas hoặc tự triển khai)                                                           |
 | Auth            | JWT Bearer, middleware `protect`                                                             |
 | AI (tùy chọn)   | OpenAI Responses API (`gpt-4o-mini`)                                                         |
-| Triển khai        | Backend: **Fly.io** (hiện tại) • Frontend: **Vercel** (production: `deepfocushub-smiling.vercel.app`) |
-
+| Deployment        | Backend: **Render** (production: `https://deepfocus-hub.onrender.com`) / Frontend: **Vercel** (production: `deepfocushub-smiling.vercel.app`) |
 ---
 
 ## 📂 Cấu trúc thư mục
@@ -128,27 +127,27 @@ npm run dev                      # chạy Vite tại http://localhost:5173
 ## 🌐 Triển khai (chỉ dẫn nhanh)
 
 1. **MongoDB Atlas**: tạo cluster, lấy URI, whiltelist IP.
-2. **Backend (Fly.io - production hiện tại)**
-   - Cài `flyctl`: https://fly.io/docs/hands-on/install-flyctl/
-   - Đăng nhập: `fly auth login`
-   - Cập nhật `fly.toml` với tên app duy nhất (`app = "deepfocus-hub"` hoặc tên của bạn)
-   - Thiết lập secrets:  
-     ```bash
-     fly secrets set \
-       MONGODB_URI="..." \
-       JWT_SECRET="..." \
-       CLIENT_ORIGIN="https://deepfocushub-smiling.vercel.app" \
-       OPENAI_API_KEY="..."  # nếu dùng
+2. **Backend (Render - production)**
+   - Create a **Web Service** on Render: https://dashboard.render.com
+   - Connect this repository and choose the deploy branch (e.g. `main`).
+   - Set `Root Directory` to `server/`, `Build Command`: `npm install`, `Start Command`: `npm start`.
+   - Configure required environment variables:
      ```
-   - Deploy: `fly deploy`
-   - Domain mặc định: `https://<app-name>.fly.dev`
-   - Health check dùng HTTP GET `/`, `internal_port = 8080`
+     MONGODB_URI=...
+     JWT_SECRET=...
+     CLIENT_ORIGIN=http://localhost:5173,https://deepfocushub-smiling.vercel.app
+     OPENAI_API_KEY=...  # optional
+     ```
+   - After deploying, Render will expose `https://deepfocus-hub.onrender.com` (or your custom domain).
+   - Health check: HTTP `GET /` is already wired up.
+
 3. **Frontend (Vercel):**
    - Build: `npm run build`
    - Output: `dist`
-   - Env: `VITE_API_URL=https://<app-name>.fly.dev/api`
-   - `client/vercel.json` đã rewrite `/api/:path*` → `https://<app-name>.fly.dev/api/:path*`
-   - Sau khi chỉnh env, nhớ **Redeploy** để build mới nhận cấu hình
+   - Env: `VITE_API_URL=https://deepfocus-hub.onrender.com/api`
+   - `client/vercel.json` rewrite `/api/:path*` → `https://deepfocus-hub.onrender.com/api/:path*`
+   - After updating envs, redeploy to refresh configuration.
+
 4. Cập nhật `.env` local nếu đổi domain (client `.env`, server `.env`).
 
 ---

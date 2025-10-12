@@ -4,18 +4,18 @@ FROM node:20-alpine AS base
 
 WORKDIR /app
 
-# Copy package files từ thư mục server/
-COPY server/package*.json ./
+# Copy package descriptors from the backend project
+COPY package*.json ./
 
-# Cài dependencies production
+# Install production dependencies
 RUN npm ci --omit=dev
 
-# Copy toàn bộ source backend
-COPY server/src ./src
+# Copy backend source code
+COPY src ./src
 
 ENV NODE_ENV=production
 
-# Fly.io sử dụng cổng 8080 cho HTTP service
-EXPOSE 8080
+# Expose the port provided via $PORT by platforms like Render
+EXPOSE 10000
 
 CMD ["node", "src/index.js"]
