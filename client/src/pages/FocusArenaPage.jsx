@@ -1,4 +1,8 @@
-import dayjs from "dayjs";
+import {
+  formatVietnamDateTime,
+  formatVietnamTime,
+  toVietnamTime
+} from "../utils/dayjs.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient, getErrorMessage } from "../utils/apiClient.js";
@@ -76,7 +80,8 @@ const FocusArenaPage = () => {
 
     const elapsedFromStart = Math.max(
       0,
-      dayjs().diff(dayjs(sessionData.startTime), "second") - pauseSeconds
+      toVietnamTime().diff(toVietnamTime(sessionData.startTime), "second") -
+        pauseSeconds
     );
 
     const initialRemaining = Math.max(
@@ -383,14 +388,14 @@ const FocusArenaPage = () => {
 
         <header className="relative z-10 flex w-full flex-col items-center gap-4 px-6 pt-16 text-center sm:px-10">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs uppercase tracking-[0.4em] text-cyan-100 backdrop-blur">
-            Không Gian Tập Trung
+            KHÔNG GIAN TẬP TRUNG
           </span>
           <h1 className="text-balance text-3xl font-bold leading-snug drop-shadow-lg sm:text-4xl">
             {session.goal}
           </h1>
           <p className="text-sm text-white/70">
             Thời lượng phiên: {session.durationSet} phút · Bắt đầu lúc{" "}
-            {dayjs(session.startTime).format("HH:mm")}
+            {formatVietnamTime(session.startTime)}
           </p>
         </header>
 
@@ -403,7 +408,7 @@ const FocusArenaPage = () => {
             >
               <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-950/70 backdrop-blur-xl shadow-[inset_0_35px_60px_-25px_rgba(0,0,0,0.65)]">
                 <div className="flex flex-col items-center justify-center gap-4">
-                  <span className="text-[6.2rem] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_15px_35px_rgba(15,23,42,0.55)] sm:text-[7.5rem]">
+                  <span className="text-[clamp(3.5rem,9vw,6.5rem)] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_15px_35px_rgba(15,23,42,0.55)] sm:text-[clamp(4rem,8vw,7.5rem)]">
                     {formatTimer(remainingSeconds)}
                   </span>
                   <span className="rounded-full bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
@@ -414,7 +419,9 @@ const FocusArenaPage = () => {
             </div>
             <div className="absolute -bottom-6 flex w-full items-center justify-center">
               <div className="flex w-full max-w-sm items-center justify-between rounded-full bg-white/10 px-6 py-3 text-xs text-white/70 backdrop-blur">
-                <span>Bắt đầu: {dayjs(session.startTime).format("HH:mm:ss")}</span>
+                <span>
+                  Bắt đầu: {formatVietnamTime(session.startTime, "HH:mm:ss")}
+                </span>
                 <span>Hoàn thành: {completionPercent}%</span>
               </div>
             </div>
@@ -517,7 +524,7 @@ const FocusArenaPage = () => {
             <li className="flex items-center justify-between rounded-xl bg-white/60 px-4 py-2 dark:bg-slate-900/60">
               <span>Bắt đầu</span>
               <span className="font-semibold">
-                {dayjs(session.startTime).format("HH:mm DD/MM")}
+                {formatVietnamDateTime(session.startTime, "HH:mm DD/MM")}
               </span>
             </li>
             <li className="flex items-center justify-between rounded-xl bg-white/60 px-4 py-2 dark:bg-slate-900/60">
@@ -545,7 +552,7 @@ const FocusArenaPage = () => {
               <ul className="space-y-1">
                 {session.distractionTimestamps.map((timestamp, index) => (
                   <li key={timestamp}>
-                    Lần {index + 1}: {dayjs(timestamp).format("HH:mm:ss")}
+                    Lần {index + 1}: {formatVietnamTime(timestamp, "HH:mm:ss")}
                   </li>
                 ))}
               </ul>

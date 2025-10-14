@@ -26,6 +26,29 @@ const taskSchema = new mongoose.Schema(
     isCompleted: {
       type: Boolean,
       default: false
+    },
+    progressNote: {
+      type: String,
+      default: ""
+    },
+    subTasks: {
+      type: [
+        new mongoose.Schema(
+          {
+            title: {
+              type: String,
+              required: [true, "Tiêu đề hạng mục cần được nhập."],
+              trim: true
+            },
+            isCompleted: {
+              type: Boolean,
+              default: false
+            }
+          },
+          { _id: true }
+        )
+      ],
+      default: []
     }
   },
   {

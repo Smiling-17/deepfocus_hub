@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from "../utils/dayjs.js";
 import { DeepWorkSession } from "../models/DeepWorkSession.js";
 import { Task } from "../models/Task.js";
 

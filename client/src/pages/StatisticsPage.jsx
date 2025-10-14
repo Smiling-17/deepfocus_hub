@@ -1,4 +1,7 @@
-import dayjs from "dayjs";
+import {
+  formatVietnamDate,
+  formatVietnamDateTime
+} from "../utils/dayjs.js";
 import { useEffect, useMemo, useState } from "react";
 import { apiClient, getErrorMessage } from "../utils/apiClient.js";
 
@@ -152,7 +155,7 @@ const StatisticsPage = () => {
                     }}
                     aria-label={`${entry.date}: ${entry.minutes} phút`}
                   >
-                    <span>{dayjs(entry.date).format("DD/MM")}</span>
+                    <span>{formatVietnamDate(entry.date, "DD/MM")}</span>
                     <span>{entry.minutes}p</span>
                   </div>
                 );
@@ -188,21 +191,45 @@ const StatisticsPage = () => {
             <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               Khung giờ tập trung
             </h3>
-            <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
-              {focusWindows.map((window) => (
-                <div
-                  key={window.hour}
-                  className={`rounded-xl border px-2 py-2 text-center ${
-                    window.minutes > 0
-                      ? "border-emerald-400 bg-emerald-50 text-emerald-600 dark:border-emerald-500 dark:bg-emerald-500/20 dark:text-emerald-200"
-                      : "border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500"
-                  }`}
-                >
-                  <p>{window.hour}h</p>
-                  <p>{window.minutes}p</p>
+            {(() => {
+              const maxFocusMinutes = Math.max(
+                ...focusWindows.map((window) => window.minutes),
+                0
+              );
+
+              const getFocusClasses = (minutes) => {
+                if (!maxFocusMinutes || minutes === 0) {
+                  return "border-slate-200 text-slate-400 dark:border-slate-700 dark:text-slate-500 bg-slate-100/40 dark:bg-slate-800/30";
+                }
+                const ratio = minutes / maxFocusMinutes;
+                if (ratio >= 0.75) {
+                  return "border-emerald-400 bg-gradient-to-br from-emerald-500 via-teal-500 to-sky-500 text-white shadow-[0_10px_25px_rgba(16,185,129,0.25)] dark:border-emerald-400/80 dark:text-white";
+                }
+                if (ratio >= 0.5) {
+                  return "border-emerald-300 bg-gradient-to-br from-emerald-400/90 to-teal-400/80 text-emerald-50 shadow-[0_8px_20px_rgba(16,185,129,0.18)] dark:border-emerald-400/70 dark:text-emerald-50";
+                }
+                if (ratio >= 0.25) {
+                  return "border-emerald-200 bg-emerald-200/70 text-emerald-800 shadow-[0_6px_18px_rgba(16,185,129,0.12)] dark:border-emerald-400/50 dark:bg-emerald-500/20 dark:text-emerald-100";
+                }
+                return "border-emerald-100 bg-emerald-100/60 text-emerald-700 shadow-[0_4px_14px_rgba(16,185,129,0.08)] dark:border-emerald-300/40 dark:bg-emerald-400/10 dark:text-emerald-200";
+              };
+
+              return (
+                <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                  {focusWindows.map((window) => (
+                    <div
+                      key={window.hour}
+                      className={`rounded-xl border px-3 py-2 text-center transition duration-200 ${getFocusClasses(
+                        window.minutes
+                      )}`}
+                    >
+                      <p className="font-semibold">{window.hour}h</p>
+                      <p>{window.minutes}p</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </section>
         </aside>
       </div>
@@ -223,7 +250,7 @@ const StatisticsPage = () => {
                 >
                   <div>
                     <p className="font-semibold">
-                      Tuần bắt đầu {dayjs(week.weekStart).format("DD/MM")}
+                      Tuần bắt đầu {formatVietnamDate(week.weekStart, "DD/MM")}
                     </p>
                     <p>{week.sessions} phiên</p>
                   </div>
@@ -254,7 +281,7 @@ const StatisticsPage = () => {
                   </p>
                   <p>{badge.description}</p>
                   <p className="text-xs text-amber-600/80 dark:text-amber-200/80">
-                    {dayjs(badge.earnedAt).format("DD/MM/YYYY")}
+                    {formatVietnamDate(badge.earnedAt, "DD/MM/YYYY")}
                   </p>
                 </li>
               ))}
@@ -292,7 +319,7 @@ const StatisticsPage = () => {
         {insight ? (
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm leading-relaxed text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
             <p className="text-xs uppercase tracking-wide text-primary">
-              Gợi ý ngày {dayjs(insight.generatedAt).format("DD/MM/YYYY")}
+              Gợi ý ngày {formatVietnamDate(insight.generatedAt, "DD/MM/YYYY")}
             </p>
             <pre className="whitespace-pre-wrap font-sans">{insight.suggestion}</pre>
           </div>
@@ -320,7 +347,7 @@ const StatisticsPage = () => {
                   {session.goal}
                 </p>
                 <p>
-                  {dayjs(session.startTime).format("DD/MM/YYYY HH:mm")} ·{" "}
+                  {formatVietnamDateTime(session.startTime, "DD/MM/YYYY HH:mm")} ·{" "}
                   {session.durationCompleted || session.durationSet} phút ·{" "}
                   {session.focusRating ? `${session.focusRating} sao` : "Chưa đánh giá"}
                 </p>

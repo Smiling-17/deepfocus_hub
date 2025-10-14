@@ -1,8 +1,8 @@
 # DeepFocus Hub
 
-> ✨ **Trải nghiệm ngay:** [https://deepfocushub-smiling.vercel.app/](https://deepfocushub-smiling.vercel.app/)
+> 🎯 **Trải nghiệm ngay:** [https://deepfocushub-smiling.vercel.app](https://deepfocushub-smiling.vercel.app)
 
-**DeepFocus Hub** là trung tâm điều phối năng suất cá nhân dành cho những ai theo đuổi phương pháp *Deep Work*. Ứng dụng kết nối toàn bộ hành trình tập trung sâu — từ lập lịch, bước vào “Không Gian Tập Trung”, đánh giá sau phiên cho tới phân tích thống kê & gợi ý AI — giúp bạn duy trì nhịp độ tập trung ổn định và bứt phá hiệu quả mỗi ngày.
+DeepFocus Hub là “trợ lý tập trung” dành cho những ai muốn xây dựng thói quen Deep Work. Ứng dụng giúp bạn lập lịch, thực hiện, đánh giá và phân tích từng phiên tập trung nhờ hệ thống thống kê – gamification – AI.
 
 <p align="center">
   <img src="./client/public/Calistya.png" alt="DeepFocus Hub Logo" height="128" />
@@ -10,87 +10,85 @@
 
 ---
 
-## 📌 Tính năng nổi bật
+## 🌟 Tính năng nổi bật
 
-### 1. Xác thực người dùng (JWT)
-- Đăng ký / đăng nhập với username & mật khẩu (bcrypt hash).
-- JWT lưu trữ phía client, middleware `protect` đảm bảo chỉ người dùng hợp lệ mới truy cập API.
-- Luồng UX: đăng ký → chuyển login → pop-up giới thiệu → vào bảng điều khiển.
+### 1. Xác thực & Quản lý người dùng
+- Đăng ký/đăng nhập bằng username & mật khẩu (bcrypt + JWT).
+- Token lưu ở client và kiểm tra bằng middleware `protect` cho mọi API bảo vệ.
+- Trải nghiệm onboarding nhẹ nhàng: đăng ký → giới thiệu → dashboard.
 
-### 2. Bảng điều khiển & Lịch nhiệm vụ
-- Timeline nhiệm vụ theo ngày với hiệu ứng động.
-- Thêm, chỉnh sửa, xóa, đánh dấu hoàn thành — nhiệm vụ gắn `userId`.
-- Modal “Đặt mục tiêu” để khởi tạo phiên Deep Work.
+### 2. Lịch nhiệm vụ & Bảng điều khiển
+- Timeline nhiệm vụ theo ngày với trạng thái trực quan.
+- Thêm / sửa / xóa / đánh dấu hoàn thành nhiệm vụ gắn `userId`.
+- Checklist con & ghi chú tiến độ cho từng nhiệm vụ.
+- Modal “Mục tiêu phiên” giúp khởi tạo Deep Work nhanh.
 
 ### 3. Không Gian Tập Trung
-- Đồng hồ đếm ngược dạng vòng conic (50 phút mặc định, tùy chỉnh).
-- Tạm dừng (tối đa 2 lần, 3 phút/lần), ghi xao nhãng, ghi chú nhanh.
-- Giao diện “phóng to toàn màn” cho trải nghiệm tập trung tuyệt đối.
-- Tự động chuyển sang màn hình đánh giá + âm báo khi hết giờ.
+- Đồng hồ đếm ngược dạng vòng tròn, tự thu phóng theo màn hình.
+- Tạm dừng tối đa 2 lần, mỗi lần 3 phút; ghi lại thời điểm xao nhãng.
+- Ghi chú nhanh, lưu tự động; âm báo và auto chuyển sang màn đánh giá khi hết giờ.
+- Chế độ toàn màn hình (immersive mode) cho trải nghiệm tập trung tuyệt đối.
 
-### 4. Đánh giá phiên & ghi dữ liệu
-- Lưu `DeepWorkSession`: mục tiêu, thời lượng, rating 1–5 sao, ghi chú, điểm thưởng.
-- Màn hình đánh giá hiển thị nhanh nhật ký, xao nhãng, tạm dừng.
+### 4. Đánh giá & Lưu dữ liệu phiên
+- Mỗi phiên lưu mục tiêu, thời lượng đặt ra/thực tế, số lần xao nhãng, ghi chú, điểm thưởng, đánh giá 1–5 sao.
+- Màn đánh giá sau phiên cho phép bạn tổng kết nhanh và chấm điểm.
 
-### 5. Thống kê & Game hóa
-- Tổng giờ Deep Work, chuỗi streak, điểm tập trung, số lần xao nhãng.
-- Heatmap theo ngày, breakdown theo tuần, phân phối rating, khung giờ vàng.
-- Huy hiệu (badge) theo milestones, danh sách phiên gần đây.
-- Tính năng “Nhận gợi ý thông minh” sử dụng OpenAI (tùy chọn).
+### 5. Thống kê & Gamification
+- **Reset theo tháng**: Tổng giờ Deep Work, Điểm tập trung, Heatmap, Phân phối đánh giá, Khung giờ tập trung, Thống kê theo tuần, Tóm tắt nhiệm vụ sẽ tự động reset vào ngày đầu tháng mới.
+- **Giữ nguyên theo toàn thời gian**: Chuỗi tập trung hiện tại (streak), Huy hiệu & thành tựu – giúp bạn duy trì động lực dài hạn.
+- Heatmap theo ngày, breakdown theo tuần ISO, biểu đồ phân phối đánh giá, khung giờ tập trung đa sắc, tóm tắt dự án.
+- Huy hiệu (badge) theo các cột mốc quan trọng.
+- AI phân tích cá nhân hóa dựa trên dữ liệu gần nhất (OpenAI).
 
-### 6. Giao diện & trải nghiệm
-- Theme sáng/tối với animation nhân vật GSAP.
-- Trang đăng nhập/đăng ký nền chuyển động, placeholder chữ nhảy.
-- Checkbox “Đánh dấu hoàn thành” animation cầu vồng.
-- Mobile-first, hỗ trợ keyboard, ARIA label đầy đủ.
+### 6. Giao diện & Trải nghiệm
+- Dark/Light mode, giao diện gradient mượt mà, animation GSAP.
+- Form đăng nhập/đăng ký sinh động, checkbox animation.
+- Responsive mobile-first, hỗ trợ bàn phím & ARIA cho accessibility.
 
 ---
 
-## 🛠️ Công nghệ sử dụng
+## 🧰 Công nghệ sử dụng
 
-| Thành phần      | Công nghệ chính                                                                               |
-|-----------------|-----------------------------------------------------------------------------------------------|
-| Frontend        | React 18 + Vite, Tailwind CSS, Day.js, GSAP, Axios, React Router                             |
-| Backend         | Node.js, Express.js, Mongoose, JSON Web Token, bcrypt                                        |
-| Database        | MongoDB (Atlas hoặc tự triển khai)                                                           |
-| Auth            | JWT Bearer, middleware `protect`                                                             |
-| AI (tùy chọn)   | OpenAI Responses API (`gpt-4o-mini`)                                                         |
-| Deployment        | Backend: **Render** (production: `https://deepfocus-hub.onrender.com`) / Frontend: **Vercel** (production: `deepfocushub-smiling.vercel.app`) |
+| Thành phần   | Công nghệ chính                                                                 |
+|--------------|----------------------------------------------------------------------------------|
+| Frontend     | React 18 + Vite, Tailwind CSS, Day.js, GSAP, Axios, React Router                |
+| Backend      | Node.js, Express.js, Mongoose, JSON Web Token, bcrypt                           |
+| Cơ sở dữ liệu| MongoDB (Atlas hoặc self-host)                                                  |
+| Xác thực     | JWT Bearer + middleware `protect`                                               |
+| AI (tùy chọn)| OpenAI Responses API (`gpt-4o-mini`)                                            |
+| Triển khai   | Backend: Render (`https://deepfocus-hub.onrender.com`), Frontend: Vercel        |
+
 ---
 
-## 📂 Cấu trúc thư mục
+## 🗂️ Cấu trúc thư mục
 
 ```
 DeepFocus_Hub/
-├── client/                         # Frontend (React + Vite)
-│   ├── public/
-│   │   ├── Calistya.png            # Logo
-│   │   └── background_login.jpg    # Ảnh nền trang đăng nhập/đăng ký
-│   ├── src/
-│   │   ├── components/             # ThemeToggle, AnimatedInput, …
-│   │   ├── context/                # ThemeContext, AuthContext
-│   │   ├── layouts/                # AppLayout (navigation, footer)
-│   │   ├── pages/                  # LoginPage, RegisterPage, DashboardPage, …
-│   │   ├── utils/                  # apiClient (Axios config)
-│   │   └── index.css               # Tailwind + custom animations
-│   └── .env.example                # Mẫu environment cho frontend
-├── server/                         # Backend (Express + Mongoose)
-│   ├── src/
-│   │   ├── config/                 # Kết nối MongoDB
-│   │   ├── controllers/            # auth, tasks, sessions, stats, insights
-│   │   ├── middleware/             # protect, error handler
-│   │   ├── models/                 # User, Task, DeepWorkSession
-│   │   └── routes/                 # Router Express
-│   └── .env.example                # Mẫu environment cho backend
-├── .gitignore
-└── README.md
+├── client/                   # Frontend (React + Vite)
+│   ├── public/               # Tài nguyên tĩnh (logo, background, ...)
+│   └── src/
+│       ├── components/       # ThemeToggle, AnimatedInput, ...
+│       ├── context/          # ThemeContext, AuthContext
+│       ├── layouts/          # AppLayout
+│       ├── pages/            # Login, Register, Dashboard, FocusArena, Statistics, ...
+│       ├── utils/            # apiClient (Axios), dayjs helper
+│       └── index.css         # Tailwind + custom style
+├── server/                   # Backend (Express + Mongoose)
+│   └── src/
+│       ├── config/           # Kết nối MongoDB
+│       ├── controllers/      # auth, tasks, sessions, stats, insights
+│       ├── middleware/       # protect, error handler
+│       ├── models/           # User, Task, DeepWorkSession
+│       └── routes/           # Router Express
+├── README.md
+└── ...
 ```
 
 ---
 
-## ⚙️ Hướng dẫn cài đặt & chạy local
+## ⚙️ Cài đặt & chạy local
 
-### Điều kiện
+### Yêu cầu
 - Node.js 18+
 - MongoDB (local hoặc Atlas)
 
@@ -103,83 +101,73 @@ cd DeepFocus_Hub
 # Backend
 cd server
 npm install
-cp .env.example .env             # cập nhật giá trị cụ thể
+cp .env.example .env        # cập nhật MONGODB_URI, JWT_SECRET, CLIENT_ORIGIN, ...
 
 # Frontend
 cd ../client
 npm install
-cp .env.example .env             # chỉnh VITE_API_URL
+cp .env.example .env        # chỉnh VITE_API_URL (ví dụ http://localhost:5000/api)
 ```
 
-### 2. Khởi chạy
+### 2. Chạy local
 ```bash
-# Terminal 1
+# Terminal 1 - Backend
 cd server
-npm run dev                      # chạy Express tại PORT (mặc định 5000)
+npm run dev                 # Express chạy tại PORT (mặc định 5000)
 
-# Terminal 2
+# Terminal 2 - Frontend
 cd client
-npm run dev                      # chạy Vite tại http://localhost:5173
+npm run dev                 # Vite chạy tại http://localhost:5173
 ```
 
 ---
 
-## 🌐 Triển khai (chỉ dẫn nhanh)
+## 🚀 Triển khai nhanh
 
-1. **MongoDB Atlas**: tạo cluster, lấy URI, whiltelist IP.
-2. **Backend (Render - production)**
-   - Create a **Web Service** on Render: https://dashboard.render.com
-   - Connect this repository and choose the deploy branch (e.g. `main`).
-   - Set `Root Directory` to `server/`, `Build Command`: `npm install`, `Start Command`: `npm start`.
-   - Configure required environment variables:
+1. **MongoDB Atlas**: tạo cluster, lấy connection string và whitelist IP.
+2. **Backend (Render)**  
+   - Root directory: `server/`  
+   - Build command: `npm install`  
+   - Start command: `npm start`  
+   - Env cần thiết:
      ```
      MONGODB_URI=...
      JWT_SECRET=...
      CLIENT_ORIGIN=http://localhost:5173,https://deepfocushub-smiling.vercel.app
-     OPENAI_API_KEY=...  # optional
+     OPENAI_API_KEY=... # tùy chọn
      ```
-   - After deploying, Render will expose `https://deepfocus-hub.onrender.com` (or your custom domain).
-   - Health check: HTTP `GET /` is already wired up.
-
-3. **Frontend (Vercel):**
-   - Build: `npm run build`
-   - Output: `dist`
-   - Env: `VITE_API_URL=https://deepfocus-hub.onrender.com/api`
-   - `client/vercel.json` rewrite `/api/:path*` → `https://deepfocus-hub.onrender.com/api/:path*`
-   - After updating envs, redeploy to refresh configuration.
-
-4. Cập nhật `.env` local nếu đổi domain (client `.env`, server `.env`).
+3. **Frontend (Vercel)**  
+   - Build command: `npm run build`  
+   - Output: `dist`  
+   - Env: `VITE_API_URL=https://deepfocus-hub.onrender.com/api`  
+   - `client/vercel.json` đã cấu hình rewrite `/api/:path*` → backend Render.
 
 ---
 
 ## 🔐 Lưu ý bảo mật
 
-- Không commit `.env` (đã cấu hình `.gitignore`).
-- JWT secret đặt chuỗi đủ dài, nên xoay vòng định kỳ.
-- Nếu dùng OpenAI, để API key ở backend, không expose trên client.
-- Cân nhắc rate limit hoặc CAPTCHA khi mở public.
+- Không commit file `.env`; đã có `.gitignore` chặn.
+- Đặt `JWT_SECRET` đủ dài, thay đổi định kỳ nếu cần.
+- Chỉ sử dụng OpenAI API key ở backend; không để lộ ở client.
+- Khi mở public, cân nhắc thêm rate limit, CAPTCHA, giám sát logs.
 
 ---
 
-## 🧭 Lộ trình phát triển tiếp
+## 🛣️ Hướng phát triển tiếp theo
 
-- Tích hợp email thông báo, nhắc lịch tập trung.
-- Hỗ trợ đồng bộ với lịch Google / Outlook.
-- Thêm các preset phiên (Pomodoro, Ultradian).
-- Dashboard team (theo dõi Deep Work của nhóm).
+- Nhắc lịch & báo cáo định kỳ qua email.
+- Đồng bộ lịch với Google / Outlook.
+- Preset phiên (Pomodoro, Ultradian).
+- Dashboard nhóm (Deep Work cho team).
 - Ứng dụng mobile (React Native / Expo).
 
 ---
 
-## 📄 Bản quyền & Giấy phép
+## 🤝 Đóng góp
 
-Dự án thuộc bản quyền của bạn. Nếu muốn chia sẻ hoặc công khai, đề nghị bổ sung giấy phép phù hợp (MIT, Apache-2.0, …) trong repository.
+Rất hoan nghênh mọi đóng góp! Khi gửi PR:
+1. Fork repository, tạo branch riêng.
+2. Giữ phong cách code nhất quán, thêm chú thích khi cần.
+3. Mô tả rõ thay đổi và ảnh hưởng trong phần mô tả PR.
 
----
-
-## 🙌 Đóng góp
-
-Pull Request / issue / góp ý rất hoan nghênh! Khi gửi PR hãy:
-1. Fork repository và tạo branch mới.
-2. Giữ coding style nhất quán.
-3. Viết mô tả rõ ràng về thay đổi & ảnh hưởng.
+Chúc bạn có những giờ Deep Work hiệu quả! 🚀

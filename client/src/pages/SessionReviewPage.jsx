@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import { formatVietnamDateTime } from "../utils/dayjs.js";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiClient, getErrorMessage } from "../utils/apiClient.js";
@@ -122,10 +122,12 @@ const SessionReviewPage = () => {
             <strong>Hoàn thành:</strong> {session.durationCompleted} phút
           </p>
           <p>
-            <strong>Bắt đầu:</strong> {dayjs(session.startTime).format("HH:mm DD/MM/YYYY")}
+            <strong>Bắt đầu:</strong>{" "}
+            {formatVietnamDateTime(session.startTime, "HH:mm DD/MM/YYYY")}
           </p>
           <p>
-            <strong>Kết thúc:</strong> {dayjs(session.endTime).format("HH:mm DD/MM/YYYY")}
+            <strong>Kết thúc:</strong>{" "}
+            {formatVietnamDateTime(session.endTime, "HH:mm DD/MM/YYYY")}
           </p>
         </section>
 

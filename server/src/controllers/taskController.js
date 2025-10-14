@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from "../utils/dayjs.js";
 import { Task } from "../models/Task.js";
 
 const parseDateRange = ({ date, from, to }) => {
@@ -52,6 +52,63 @@ const parseDateRange = ({ date, from, to }) => {
   };
 };
 
+const sanitizeProgressNote = (note) => {
+  if (typeof note !== "string") {
+    return "";
+  }
+  return note.trim().slice(0, 500);
+};
+
+const sanitizeSubTasks = (rawSubTasks) => {
+  if (!Array.isArray(rawSubTasks)) {
+    return [];
+  }
+
+  return rawSubTasks
+    .map((item) => {
+      if (!item && item !== "") {
+        return null;
+      }
+
+      const title =
+        typeof item === "string"
+          ? item
+          : typeof item?.title === "string"
+          ? item.title
+          : "";
+      const trimmedTitle = title.trim();
+
+      if (!trimmedTitle) {
+        return null;
+      }
+
+      const sanitized = {
+        title: trimmedTitle.slice(0, 120),
+        isCompleted: Boolean(
+          typeof item === "object" && item !== null
+            ? item.isCompleted
+            : false
+        )
+      };
+
+      if (typeof item === "object" && item !== null && item._id) {
+        sanitized._id = item._id;
+      }
+
+      return sanitized;
+    })
+    .filter(Boolean);
+};
+
+const syncTaskCompletionFromSubTasks = (task) => {
+  if (!task.subTasks || task.subTasks.length === 0) {
+    return;
+  }
+
+  const allCompleted = task.subTasks.every((subTask) => Boolean(subTask.isCompleted));
+  task.isCompleted = allCompleted;
+};
+
 export const createTask = async (req, res, next) => {
   try {
     const { title, startTime, endTime, project = "" } = req.body;
@@ -77,12 +134,20 @@ export const createTask = async (req, res, next) => {
       });
     }
 
+    const subTasks = sanitizeSubTasks(req.body.subTasks);
+    const progressNote = sanitizeProgressNote(req.body.progressNote);
+    const isCompletedByDefault =
+      subTasks.length > 0 && subTasks.every((subTask) => subTask.isCompleted);
+
     const task = await Task.create({
       userId: req.user._id,
       title: title.trim(),
       startTime: start.toDate(),
       endTime: end.toDate(),
-      project: project?.trim() || ""
+      project: project?.trim() || "",
+      progressNote,
+      subTasks,
+      isCompleted: isCompletedByDefault
     });
 
     return res.status(201).json(task);
@@ -118,7 +183,8 @@ export const getTasks = async (req, res, next) => {
 export const updateTask = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, startTime, endTime, project } = req.body;
+    const { title, startTime, endTime, project, subTasks, progressNote } =
+      req.body;
 
     const task = await Task.findOne({ _id: id, userId: req.user._id });
 
@@ -169,6 +235,17 @@ export const updateTask = async (req, res, next) => {
       task.project = project?.trim() || "";
     }
 
+    if (progressNote !== undefined) {
+      task.progressNote = sanitizeProgressNote(progressNote);
+    }
+
+    if (subTasks !== undefined) {
+      const sanitizedSubTasks = sanitizeSubTasks(subTasks);
+      task.subTasks = sanitizedSubTasks;
+      syncTaskCompletionFromSubTasks(task);
+      task.markModified("subTasks");
+    }
+
     await task.save();
 
     return res.json(task);
@@ -190,6 +267,15 @@ export const toggleTaskCompletion = async (req, res, next) => {
     }
 
     task.isCompleted = Boolean(isCompleted);
+
+    if (task.subTasks && task.subTasks.length > 0) {
+      const completed = Boolean(isCompleted);
+      task.subTasks.forEach((subTask) => {
+        subTask.isCompleted = completed;
+      });
+      task.markModified("subTasks");
+    }
+
     await task.save();
 
     return res.json(task);

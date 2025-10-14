@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from "./dayjs.js";
 
 export const buildHeatmap = (sessions) => {
   const map = new Map();
@@ -27,7 +27,7 @@ export const buildWeeklyBreakdown = (sessions) => {
 
   sessions.forEach((session) => {
     const date = dayjs(session.endTime || session.startTime);
-    const weekKey = date.startOf("week").format("YYYY-MM-DD");
+    const weekKey = date.startOf("isoWeek").format("YYYY-MM-DD");
     const value = weeks.get(weekKey) || { minutes: 0, sessions: 0 };
     const minutes = session.durationCompleted || session.durationSet || 0;
     weeks.set(weekKey, {
