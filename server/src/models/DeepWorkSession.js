@@ -35,6 +35,11 @@ const deepWorkSessionSchema = new mongoose.Schema(
       trim: true,
       default: ""
     },
+    youtubeVideoId: {
+      type: String,
+      trim: true,
+      default: ""
+    },
     startTime: {
       type: Date
     },

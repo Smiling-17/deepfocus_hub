@@ -46,7 +46,7 @@ export const getSessionById = async (req, res, next) => {
 
 export const startSession = async (req, res, next) => {
   try {
-    const { taskId, goal, durationMinutes = 50, startTime } = req.body;
+    const { taskId, goal, durationMinutes = 50, startTime, youtubeVideoId } = req.body;
 
     if (!goal || !goal.trim()) {
       return res.status(400).json({
@@ -90,6 +90,7 @@ export const startSession = async (req, res, next) => {
       taskId: relatedTask?._id,
       goal: goal.trim(),
       durationSet: durationMinutes,
+      youtubeVideoId: youtubeVideoId || "",
       startTime: startTime && dayjs(startTime).isValid()
         ? dayjs(startTime).toDate()
         : new Date()

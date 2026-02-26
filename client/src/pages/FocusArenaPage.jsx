@@ -15,6 +15,28 @@ const formatTimer = (seconds) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   YouTubePlayer — embeds a YouTube video via native iframe
+───────────────────────────────────────────────────────────────────────────── */
+const YouTubePlayer = ({ videoId, className = "" }) => {
+  if (!videoId) return null;
+
+  return (
+    <div className={`relative w-full overflow-hidden rounded-2xl bg-black shadow-lg ${className}`}>
+      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+        <iframe
+          className="absolute inset-0 h-full w-full rounded-2xl"
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+          title="Study With Me — YouTube"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
    TimerExperience — module level to prevent unmount/remount flicker.
    All state lives in FocusArenaPage; this component is purely presentational.
 ───────────────────────────────────────────────────────────────────────────── */
@@ -118,9 +140,6 @@ const FocusArenaPage = () => {
   const [error, setError] = useState("");
 
   const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const [notes, setNotes] = useState("");
-  const [isSavingNotes, setIsSavingNotes] = useState(false);
-  const [noteSavedMessage, setNoteSavedMessage] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [isCompleting, setIsCompleting] = useState(false);
   const [isImmersive, setIsImmersive] = useState(false);
@@ -143,7 +162,6 @@ const FocusArenaPage = () => {
         const elapsedFromStart = Math.floor((Date.now() - startMs) / 1000);
         const initialRemaining = Math.max(0, totalSeconds - elapsedFromStart);
         setSession(data);
-        setNotes(data.quickNotes || "");
         setRemainingSeconds(initialRemaining);
       } catch (err) {
         setError(getErrorMessage(err));
@@ -237,24 +255,6 @@ const FocusArenaPage = () => {
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleNotesSave = async () => {
-    if (!session) return;
-    setIsSavingNotes(true);
-    setNoteSavedMessage("");
-    try {
-      const response = await apiClient.patch(
-        `/sessions/${session._id}/notes`,
-        { quickNotes: notes }
-      );
-      setSession(response.data);
-      setNoteSavedMessage("Đã lưu ghi chú.");
-    } catch (err) {
-      setNoteSavedMessage(getErrorMessage(err));
-    } finally {
-      setIsSavingNotes(false);
-    }
-  };
-
   const handleCompleteSession = useCallback(
     async (autoFinish = false) => {
       if (!session || completionTriggerRef.current) return;
@@ -269,7 +269,7 @@ const FocusArenaPage = () => {
 
         const response = await apiClient.patch(
           `/sessions/${session._id}/complete`,
-          { durationCompleted, quickNotes: notes }
+          { durationCompleted }
         );
         playCompletionSound();
         navigate(`/danh-gia-phien/${response.data._id}`, {
@@ -283,7 +283,7 @@ const FocusArenaPage = () => {
         setIsCompleting(false);
       }
     },
-    [session, remainingSeconds, notes, navigate]
+    [session, remainingSeconds, navigate]
   );
 
   const handleToggleImmersive = useCallback(
@@ -360,50 +360,53 @@ const FocusArenaPage = () => {
     onToggleImmersive: handleToggleImmersive
   };
 
+  const hasVideo = Boolean(session.youtubeVideoId);
+
   // ── Immersive fullscreen layout ───────────────────────────────────────────
   if (isImmersive) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-2xl">
-        <TimerExperience immersive {...timerProps} />
+        <div className={`flex w-full max-w-[90rem] items-center justify-center gap-6 ${hasVideo ? "flex-col xl:flex-row" : ""}`}>
+          <div className={hasVideo ? "w-full xl:flex-1" : "w-full"}>
+            <TimerExperience immersive {...timerProps} />
+          </div>
+          {hasVideo && (
+            <aside className="flex w-full flex-col gap-4 xl:w-[28rem] xl:max-w-[28rem]">
+              <section className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur">
+                <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3">
+                  <span className="text-sm font-semibold text-white/90">🎬 Video đang phát</span>
+                </div>
+                <div className="p-3">
+                  <YouTubePlayer videoId={session.youtubeVideoId} />
+                </div>
+              </section>
+            </aside>
+          )}
+        </div>
       </div>
     );
   }
 
   // ── Normal layout ─────────────────────────────────────────────────────────
   return (
-    <section className="grid flex-1 grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <section className={`grid flex-1 gap-8 ${hasVideo ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem]" : "grid-cols-1"}`}>
       <TimerExperience immersive={false} {...timerProps} />
 
-      <aside className="flex w-full flex-col gap-6 xl:w-[22rem] xl:max-w-[22rem]">
-        <section className="glass-panel space-y-3">
-          <header>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              Ghi chú nhanh
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-300">
-              Bất cứ ý tưởng nào xuất hiện, hãy ghi lại ngay để giải phóng tâm trí.
-            </p>
-          </header>
-          <textarea
-            className="input-field h-40 resize-none bg-white/60 text-sm dark:bg-slate-900/70"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            onBlur={handleNotesSave}
-            placeholder="Viết ra điều bạn muốn nhớ sau phiên này..."
-          />
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-300">
-            <button
-              type="button"
-              onClick={handleNotesSave}
-              className="rounded-full border border-slate-300 px-3 py-1 font-semibold transition hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
-              disabled={isSavingNotes}
-            >
-              {isSavingNotes ? "Đang lưu..." : "Lưu ghi chú"}
-            </button>
-            {noteSavedMessage && <span>{noteSavedMessage}</span>}
-          </div>
-        </section>
-      </aside>
+      {hasVideo && (
+        <aside className="flex w-full flex-col gap-6 xl:w-[22rem] xl:max-w-[22rem]">
+          <section className="glass-panel space-y-3">
+            <header>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                🎬 Video đang phát
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-300">
+                Video YouTube sẽ phát tự động để bạn tập trung cùng.
+              </p>
+            </header>
+            <YouTubePlayer videoId={session.youtubeVideoId} />
+          </section>
+        </aside>
+      )}
     </section>
   );
 };

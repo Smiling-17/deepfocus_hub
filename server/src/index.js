@@ -12,6 +12,7 @@ import taskRoutes from "./routes/taskRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 import statRoutes from "./routes/statRoutes.js";
 import insightRoutes from "./routes/insightRoutes.js";
+import youtubeRoutes from "./routes/youtubeRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 dotenv.config();
@@ -32,7 +33,7 @@ const allowList = (process.env.CLIENT_ORIGIN || "")
 // Thêm các origin mặc định nếu không có CLIENT_ORIGIN
 const defaultOrigins = [
   "http://localhost:3000",
-  "http://localhost:5173", 
+  "http://localhost:5173",
   "https://deepfocushub-smiling.vercel.app"
 ];
 
@@ -94,6 +95,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/stats", statRoutes);
 app.use("/api/insights", insightRoutes);
+app.use("/api/youtube", youtubeRoutes);
 
 /* --------------------------- 404 & error handler --------------------------- */
 app.use(notFound);

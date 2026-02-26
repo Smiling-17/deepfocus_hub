@@ -20,7 +20,33 @@ const createDefaultTaskForm = () => ({
 const defaultGoalForm = {
   taskId: null,
   goal: "",
-  durationMinutes: 50
+  durationMinutes: 50,
+  youtubeUrl: ""
+};
+
+const extractYouTubeVideoId = (url) => {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    // youtube.com/watch?v=ID
+    if (parsed.hostname.includes("youtube.com") && parsed.searchParams.get("v")) {
+      return parsed.searchParams.get("v");
+    }
+    // youtu.be/ID
+    if (parsed.hostname === "youtu.be" && parsed.pathname.length > 1) {
+      return parsed.pathname.slice(1).split("/")[0];
+    }
+    // youtube.com/embed/ID or youtube.com/live/ID
+    const embedMatch = parsed.pathname.match(/^\/(embed|live|v)\/([^/?]+)/);
+    if (embedMatch && parsed.hostname.includes("youtube")) {
+      return embedMatch[2];
+    }
+  } catch {
+    // Not a valid URL
+  }
+  return "";
 };
 
 const toVietnameseTitleCase = (value = "") =>
@@ -201,6 +227,10 @@ const DashboardPage = () => {
     }));
   };
 
+  const parsedVideoId = extractYouTubeVideoId(goalForm.youtubeUrl);
+  const hasYouTubeInput = goalForm.youtubeUrl.trim().length > 0;
+  const isYouTubeUrlInvalid = hasYouTubeInput && !parsedVideoId;
+
   const handleStartSession = async (event) => {
     event.preventDefault();
     setGoalError("");
@@ -216,10 +246,12 @@ const DashboardPage = () => {
 
     setIsSubmittingGoal(true);
     try {
+      const videoId = extractYouTubeVideoId(goalForm.youtubeUrl);
       await apiClient.post("/sessions", {
         taskId: goalForm.taskId,
         goal: goalForm.goal.trim(),
-        durationMinutes: goalForm.durationMinutes
+        durationMinutes: goalForm.durationMinutes,
+        youtubeVideoId: videoId
       });
       setShowGoalModal(false);
       setGoalForm(defaultGoalForm);
@@ -676,6 +708,34 @@ const DashboardPage = () => {
                 <p className="mt-1 text-xs text-slate-500">
                   Gợi ý: 50 phút là một chu kỳ Deep Work cân bằng giữa độ sâu và khả năng hồi phục.
                 </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="goal-youtube"
+                  className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                >
+                  Link YouTube (không bắt buộc)
+                </label>
+                <input
+                  id="goal-youtube"
+                  name="youtubeUrl"
+                  type="url"
+                  className="input-field"
+                  value={goalForm.youtubeUrl}
+                  onChange={handleGoalFormChange}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                {isYouTubeUrlInvalid && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Link không hợp lệ. Hỗ trợ: youtube.com/watch?v=..., youtu.be/..., youtube.com/live/...
+                  </p>
+                )}
+                {parsedVideoId && (
+                  <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                    ✓ Video sẵn sàng — sẽ phát tự động khi vào Không Gian Tập Trung
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">
