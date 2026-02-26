@@ -265,7 +265,7 @@ const DashboardPage = () => {
   return (
     <>
       <section className="flex flex-1 flex-col gap-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-indigo-500 to-aurora-cyan text-white shadow-glow">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-indigo-900 to-slate-900 text-white shadow-glow">
           <div
             className="absolute inset-0 opacity-30 md:opacity-40"
             style={{
@@ -276,7 +276,7 @@ const DashboardPage = () => {
           <div className="relative z-10 flex flex-col gap-8 px-6 py-8 md:px-10 md:py-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div className="space-y-4">
-                <div className="rounded-3xl border border-white/20 bg-gradient-to-r from-sky-500 via-indigo-500 to-violet-500 p-6 text-white shadow-lg backdrop-blur-lg">
+                <div className="rounded-3xl border border-white/10 bg-white/10 p-6 text-white shadow-lg backdrop-blur-lg">
                   <div className="space-y-3 text-white/95">
                     <p className="text-xs uppercase tracking-[0.45em] text-white/80">
                       Thời gian Việt Nam
@@ -522,31 +522,60 @@ const DashboardPage = () => {
                   )}
                 </div>
 
-                <div>
-                  <label
-                    htmlFor="task-startTime"
-                    className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
-                  >
-                    Bắt đầu
-                  </label>
-                  <input
-                    id="task-startTime"
-                    name="startTime"
-                    type="time"
-                    value={taskForm.startTime}
-                    onChange={handleTaskFormChange}
-                    className="input-field bg-white/95 dark:bg-slate-900/80"
-                    aria-invalid={Boolean(taskFormErrors.startTime)}
-                    aria-describedby={
-                      taskFormErrors.startTime ? "task-startTime-error" : undefined
-                    }
-                  />
-                  {taskFormErrors.startTime && (
-                    <p id="task-startTime-error" className="mt-1 text-sm text-red-600">
-                      {taskFormErrors.startTime}
-                    </p>
-                  )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="task-startTime"
+                      className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                    >
+                      Bắt đầu
+                    </label>
+                    <input
+                      id="task-startTime"
+                      name="startTime"
+                      type="time"
+                      value={taskForm.startTime}
+                      onChange={handleTaskFormChange}
+                      className="input-field bg-white/95 dark:bg-slate-900/80"
+                      aria-invalid={Boolean(taskFormErrors.startTime)}
+                      aria-describedby={
+                        taskFormErrors.startTime ? "task-startTime-error" : undefined
+                      }
+                    />
+                    {taskFormErrors.startTime && (
+                      <p id="task-startTime-error" className="mt-1 text-sm text-red-600">
+                        {taskFormErrors.startTime}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="task-endTime"
+                      className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
+                    >
+                      Kết thúc
+                    </label>
+                    <input
+                      id="task-endTime"
+                      name="endTime"
+                      type="time"
+                      value={taskForm.endTime}
+                      onChange={handleTaskFormChange}
+                      className="input-field bg-white/95 dark:bg-slate-900/80"
+                      aria-invalid={Boolean(taskFormErrors.endTime)}
+                      aria-describedby={
+                        taskFormErrors.endTime ? "task-endTime-error" : undefined
+                      }
+                    />
+                    {taskFormErrors.endTime && (
+                      <p id="task-endTime-error" className="mt-1 text-sm text-red-600">
+                        {taskFormErrors.endTime}
+                      </p>
+                    )}
+                  </div>
                 </div>
+
 
                 <button
                   type="submit"
