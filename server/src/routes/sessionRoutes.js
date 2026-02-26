@@ -2,8 +2,6 @@ import express from "express";
 import {
   getActiveSession,
   startSession,
-  logPauseEvent,
-  logDistraction,
   updateQuickNotes,
   completeSession,
   submitReview,
@@ -20,10 +18,9 @@ router.get("/active", getActiveSession);
 router.get("/history", getSessionHistory);
 router.get("/:id", getSessionById);
 router.post("/", startSession);
-router.patch("/:id/pause", logPauseEvent);
-router.patch("/:id/distraction", logDistraction);
 router.patch("/:id/notes", updateQuickNotes);
 router.patch("/:id/complete", completeSession);
 router.post("/:id/rating", submitReview);
 
 export default router;
+

@@ -20,7 +20,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1",
-    "openai": "^4.58.1"
+    "@google/generative-ai": "^0.24.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

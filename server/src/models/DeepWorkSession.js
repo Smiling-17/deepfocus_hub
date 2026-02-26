@@ -28,26 +28,8 @@ const deepWorkSessionSchema = new mongoose.Schema(
       min: 1,
       max: 5
     },
-    distractionTimestamps: [
-      {
-        type: Date
-      }
-    ],
-    pauseEvents: [
-      {
-        startedAt: {
-          type: Date,
-          required: true
-        },
-        endedAt: {
-          type: Date
-        },
-        durationSeconds: {
-          type: Number,
-          default: 0
-        }
-      }
-    ],
+
+
     quickNotes: {
       type: String,
       trim: true,

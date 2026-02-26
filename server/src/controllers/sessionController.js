@@ -2,8 +2,6 @@ import dayjs from "../utils/dayjs.js";
 import { DeepWorkSession } from "../models/DeepWorkSession.js";
 import { Task } from "../models/Task.js";
 
-const MAX_PAUSES = 2;
-const MAX_PAUSE_SECONDS = 180;
 
 export const getActiveSession = async (req, res, next) => {
   try {
@@ -103,94 +101,6 @@ export const startSession = async (req, res, next) => {
   }
 };
 
-export const logPauseEvent = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { startedAt, endedAt } = req.body;
-
-    if (!startedAt || !endedAt) {
-      return res.status(400).json({
-        message: "Vui lòng cung cấp thời gian bắt đầu và kết thúc tạm dừng."
-      });
-    }
-
-    const session = await DeepWorkSession.findOne({
-      _id: id,
-      userId: req.user._id,
-      status: "in_progress"
-    });
-
-    if (!session) {
-      return res.status(404).json({
-        message: "Phiên làm việc không tồn tại hoặc đã kết thúc."
-      });
-    }
-
-    if (session.pauseEvents.length >= MAX_PAUSES) {
-      return res.status(400).json({
-        message: "Bạn chỉ có thể tạm dừng tối đa 2 lần cho mỗi phiên."
-      });
-    }
-
-    const start = dayjs(startedAt);
-    const end = dayjs(endedAt);
-
-    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
-      return res.status(400).json({
-        message: "Thời gian tạm dừng không hợp lệ."
-      });
-    }
-
-    const diffSeconds = end.diff(start, "second");
-    if (diffSeconds > MAX_PAUSE_SECONDS) {
-      return res.status(400).json({
-        message: "Mỗi lần tạm dừng tối đa 3 phút."
-      });
-    }
-
-    session.pauseEvents.push({
-      startedAt: start.toDate(),
-      endedAt: end.toDate(),
-      durationSeconds: diffSeconds
-    });
-
-    await session.save();
-
-    return res.json(session);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const logDistraction = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { timestamp } = req.body;
-
-    const session = await DeepWorkSession.findOne({
-      _id: id,
-      userId: req.user._id,
-      status: "in_progress"
-    });
-
-    if (!session) {
-      return res.status(404).json({
-        message: "Phiên làm việc không tồn tại hoặc đã kết thúc."
-      });
-    }
-
-    const distractionTime = timestamp && dayjs(timestamp).isValid()
-      ? dayjs(timestamp).toDate()
-      : new Date();
-
-    session.distractionTimestamps.push(distractionTime);
-    await session.save();
-
-    return res.json(session);
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const updateQuickNotes = async (req, res, next) => {
   try {
