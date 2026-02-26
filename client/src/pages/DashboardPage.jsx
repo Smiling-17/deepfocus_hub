@@ -78,6 +78,13 @@ const DashboardPage = () => {
   const [goalError, setGoalError] = useState("");
   const [isSubmittingGoal, setIsSubmittingGoal] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchPanel, setShowSearchPanel] = useState(false);
+
+  const [favorites, setFavorites] = useState([]);
+
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   useEffect(() => {
@@ -210,14 +217,39 @@ const DashboardPage = () => {
   };
 
   const openGoalModal = (task) => {
+    const lastUrl = localStorage.getItem("dfh_last_youtube_url") || "";
     setGoalForm({
       taskId: task?._id || null,
       goal: task ? `Hoàn thành: ${task.title}` : "",
       durationMinutes: 50,
-      youtubeUrl: ""
+      youtubeUrl: lastUrl
     });
     setGoalError("");
     setShowGoalModal(true);
+    // Fetch favorites
+    apiClient.get("/youtube/favorites").then((res) => {
+      setFavorites(res.data || []);
+    }).catch(() => setFavorites([]));
+  };
+
+  const handleSaveFavorite = async () => {
+    if (!parsedVideoId || !goalForm.youtubeUrl.trim()) return;
+    try {
+      await apiClient.post("/youtube/favorites", {
+        videoId: parsedVideoId,
+        title: "",
+        url: goalForm.youtubeUrl.trim()
+      });
+      const res = await apiClient.get("/youtube/favorites");
+      setFavorites(res.data || []);
+    } catch { /* ignore */ }
+  };
+
+  const handleRemoveFavorite = async (videoId) => {
+    try {
+      await apiClient.delete(`/youtube/favorites/${videoId}`);
+      setFavorites((prev) => prev.filter((f) => f.videoId !== videoId));
+    } catch { /* ignore */ }
   };
 
   const handleGoalFormChange = (event) => {
@@ -231,6 +263,35 @@ const DashboardPage = () => {
   const parsedVideoId = extractYouTubeVideoId(goalForm.youtubeUrl);
   const hasYouTubeInput = goalForm.youtubeUrl.trim().length > 0;
   const isYouTubeUrlInvalid = hasYouTubeInput && !parsedVideoId;
+
+  const handleYouTubeSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setSearchResults([]);
+    try {
+      const res = await apiClient.get(
+        `/youtube/search?q=${encodeURIComponent(searchQuery.trim())}`
+      );
+      setSearchResults(res.data.videos || []);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Không thể tìm kiếm video. Vui lòng thử lại.";
+      setGoalError(msg);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSelectSearchResult = (video) => {
+    setGoalForm((prev) => ({
+      ...prev,
+      youtubeUrl: `https://www.youtube.com/watch?v=${video.videoId}`
+    }));
+    setShowSearchPanel(false);
+    setSearchResults([]);
+    setSearchQuery("");
+  };
 
   const handleStartSession = async (event) => {
     event.preventDefault();
@@ -254,6 +315,9 @@ const DashboardPage = () => {
         durationMinutes: goalForm.durationMinutes,
         youtubeVideoId: videoId
       });
+      if (goalForm.youtubeUrl.trim()) {
+        localStorage.setItem("dfh_last_youtube_url", goalForm.youtubeUrl.trim());
+      }
       setShowGoalModal(false);
       setGoalForm(defaultGoalForm);
       navigate("/khong-gian-tap-trung", {
@@ -718,15 +782,56 @@ const DashboardPage = () => {
                 >
                   Link YouTube (không bắt buộc)
                 </label>
-                <input
-                  id="goal-youtube"
-                  name="youtubeUrl"
-                  type="url"
-                  className="input-field"
-                  value={goalForm.youtubeUrl}
-                  onChange={handleGoalFormChange}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                />
+
+                {favorites.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {favorites.map((fav) => (
+                      <div key={fav.videoId} className="group flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                        <button
+                          type="button"
+                          onClick={() => setGoalForm((p) => ({ ...p, youtubeUrl: fav.url }))}
+                          className="hover:underline truncate max-w-[10rem]"
+                          title={fav.url}
+                        >
+                          {fav.title || fav.videoId}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFavorite(fav.videoId)}
+                          className="ml-0.5 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                          title="Xóa khỏi yêu thích"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    id="goal-youtube"
+                    name="youtubeUrl"
+                    type="url"
+                    className="input-field flex-1"
+                    value={goalForm.youtubeUrl}
+                    onChange={handleGoalFormChange}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  {parsedVideoId && !favorites.some((f) => f.videoId === parsedVideoId) && (
+                    <button
+                      type="button"
+                      onClick={handleSaveFavorite}
+                      className="flex-shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-2.5 text-amber-600 hover:bg-amber-100 transition dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+                      title="Lưu vào yêu thích"
+                    >
+                      ☆
+                    </button>
+                  )}
+                  {parsedVideoId && favorites.some((f) => f.videoId === parsedVideoId) && (
+                    <span className="flex-shrink-0 flex items-center px-2.5 text-amber-500" title="Đã lưu">★</span>
+                  )}
+                </div>
                 {isYouTubeUrlInvalid && (
                   <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                     Link không hợp lệ. Hỗ trợ: youtube.com/watch?v=..., youtu.be/..., youtube.com/live/...
@@ -736,6 +841,64 @@ const DashboardPage = () => {
                   <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
                     ✓ Video sẵn sàng — sẽ phát tự động khi vào Không Gian Tập Trung
                   </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowSearchPanel((p) => !p)}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition"
+                >
+                  {showSearchPanel ? '▲ Ẩn tìm kiếm' : '🔍 Tìm video trên YouTube'}
+                </button>
+
+                {showSearchPanel && (
+                  <div className="mt-2 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        className="input-field flex-1 text-sm"
+                        placeholder="VD: study with me lofi, deep focus music..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleYouTubeSearch(); } }}
+                      />
+                      <button
+                        type="button"
+                        disabled={isSearching || !searchQuery.trim()}
+                        onClick={handleYouTubeSearch}
+                        className="btn-primary whitespace-nowrap text-xs px-3 py-1.5 disabled:opacity-50"
+                      >
+                        {isSearching ? 'Đang tìm...' : 'Tìm'}
+                      </button>
+                    </div>
+
+                    {searchResults.length > 0 && (
+                      <div className="grid gap-2 max-h-[14rem] overflow-y-auto">
+                        {searchResults.map((video) => (
+                          <button
+                            key={video.videoId}
+                            type="button"
+                            onClick={() => handleSelectSearchResult(video)}
+                            className="flex items-center gap-3 rounded-lg p-2 text-left transition hover:bg-slate-200 dark:hover:bg-slate-700"
+                          >
+                            <img
+                              src={video.thumbnail}
+                              alt=""
+                              className="h-12 w-20 flex-shrink-0 rounded-md object-cover"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium text-slate-800 dark:text-slate-100 line-clamp-2">
+                                {video.title}
+                              </p>
+                              <p className="text-[0.65rem] text-slate-500 dark:text-slate-400">
+                                {video.channelTitle}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

@@ -5,7 +5,8 @@ import { Task } from "../models/Task.js";
 import { calculateStreaks } from "../utils/statUtils.js";
 
 const MIN_DURATION_MINUTES = 10;
-const MAX_SESSIONS_IN_PROMPT = 20;
+const MAX_SESSIONS_IN_PROMPT = 30;
+const MAX_SESSION_DETAILS = 12;
 const MAX_TASK_CONTEXT = 8;
 const MAX_PROJECT_CONTEXT = 5;
 const TIME_SEGMENTS = [
@@ -45,32 +46,45 @@ const getTimeSegmentLabel = (date) => {
 };
 
 const summarizeSessions = (sessions, taskMap) => {
-  const totals = { count: sessions.length, minutes: 0, distractions: 0, goalsMet: 0 };
+  const totals = { count: sessions.length, minutes: 0, goalsMet: 0 };
   const segmentAccumulator = new Map();
   let longestSession = null;
+
+  // Focus rating tracking
+  let totalRating = 0;
+  let ratedCount = 0;
+  const ratingBuckets = { low: 0, mid: 0, high: 0 }; // 1-2, 3, 4-5
 
   sessions.forEach((session) => {
     const duration = session.durationCompleted || session.durationSet || MIN_DURATION_MINUTES;
     const target = session.durationSet || duration;
     const actual = session.durationCompleted || duration;
-    const distractions = session.distractionTimestamps?.length || 0;
     const segmentLabel = getTimeSegmentLabel(session.startTime);
 
     totals.minutes += actual;
-    totals.distractions += distractions;
+
+    // Focus rating
+    if (session.focusRating && session.focusRating >= 1 && session.focusRating <= 5) {
+      totalRating += session.focusRating;
+      ratedCount += 1;
+      if (session.focusRating <= 2) ratingBuckets.low += 1;
+      else if (session.focusRating === 3) ratingBuckets.mid += 1;
+      else ratingBuckets.high += 1;
+    }
 
     const goalMet = target > 0 ? actual >= target * 0.95 : actual >= MIN_DURATION_MINUTES;
     if (goalMet) totals.goalsMet += 1;
 
     const existing = segmentAccumulator.get(segmentLabel) || {
-      label: segmentLabel, sessions: 0, minutes: 0, goalsMet: 0, distractions: 0
+      label: segmentLabel, sessions: 0, minutes: 0, goalsMet: 0, totalRating: 0, ratedCount: 0
     };
     segmentAccumulator.set(segmentLabel, {
       label: segmentLabel,
       sessions: existing.sessions + 1,
       minutes: existing.minutes + actual,
       goalsMet: existing.goalsMet + (goalMet ? 1 : 0),
-      distractions: existing.distractions + distractions
+      totalRating: existing.totalRating + (session.focusRating || 0),
+      ratedCount: existing.ratedCount + (session.focusRating ? 1 : 0)
     });
 
     const candidate = {
@@ -85,7 +99,7 @@ const summarizeSessions = (sessions, taskMap) => {
   });
 
   const averageDuration = totals.count > 0 ? totals.minutes / totals.count : 0;
-  const avgDistractions = totals.count > 0 ? totals.distractions / totals.count : 0;
+  const avgRating = ratedCount > 0 ? totalRating / ratedCount : null;
   const completionRate = totals.count > 0 ? (totals.goalsMet / totals.count) * 100 : 0;
 
   const segments = Array.from(segmentAccumulator.values())
@@ -93,11 +107,60 @@ const summarizeSessions = (sessions, taskMap) => {
       ...seg,
       goalRate: seg.sessions > 0 ? Math.round((seg.goalsMet / seg.sessions) * 100) : 0,
       avgMinutes: seg.sessions > 0 ? Math.round((seg.minutes / seg.sessions) * 10) / 10 : 0,
-      avgDistractions: seg.sessions > 0 ? Math.round((seg.distractions / seg.sessions) * 10) / 10 : 0
+      avgRating: seg.ratedCount > 0 ? Math.round((seg.totalRating / seg.ratedCount) * 10) / 10 : null
     }))
     .sort((a, b) => b.minutes - a.minutes);
 
-  return { totals, averageDuration, avgDistractions, completionRate, longestSession, segments };
+  return { totals, averageDuration, avgRating, ratedCount, ratingBuckets, completionRate, longestSession, segments };
+};
+
+/* Danh sách chi tiết từng phiên gần nhất */
+const buildSessionDetails = (sessions) =>
+  sessions.slice(0, MAX_SESSION_DETAILS).map((s) => {
+    const actual = s.durationCompleted || s.durationSet || 0;
+    const target = s.durationSet || actual;
+    const date = dayjs(s.startTime).format("DD/MM HH:mm");
+    const rating = s.focusRating ? `${s.focusRating}/5` : "chưa đánh giá";
+    const completion = target > 0 ? Math.round((actual / target) * 100) : 0;
+    const goal = truncate(s.goal, 60) || "Không ghi mục tiêu";
+    return `- ${date} | "${goal}" | ${actual}/${target} phút (${completion}%) | Chất lượng: ${rating}`;
+  });
+
+/* So sánh tuần này vs tuần trước */
+const buildWeekComparison = (allSessions) => {
+  const startThisWeek = dayjs().startOf("week");
+  const startLastWeek = startThisWeek.subtract(7, "day");
+
+  const thisWeek = allSessions.filter((s) => dayjs(s.startTime).isAfter(startThisWeek));
+  const lastWeek = allSessions.filter((s) => {
+    const d = dayjs(s.startTime);
+    return d.isAfter(startLastWeek) && d.isBefore(startThisWeek);
+  });
+
+  const calcStats = (sessions) => {
+    const count = sessions.length;
+    const minutes = sessions.reduce((sum, s) => sum + (s.durationCompleted || s.durationSet || 0), 0);
+    const ratings = sessions.filter((s) => s.focusRating).map((s) => s.focusRating);
+    const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+    return { count, minutes, avgRating };
+  };
+
+  const tw = calcStats(thisWeek);
+  const lw = calcStats(lastWeek);
+
+  const pctChange = (current, previous) => {
+    if (previous === 0) return current > 0 ? "+∞" : "0%";
+    const change = ((current - previous) / previous) * 100;
+    return `${change >= 0 ? "+" : ""}${Math.round(change)}%`;
+  };
+
+  return [
+    `- Tuần này: ${tw.count} phiên, ${formatMinutes(tw.minutes)} phút${tw.avgRating ? `, chất lượng TB ${numberFormatter.format(tw.avgRating)}/5` : ""}`,
+    `- Tuần trước: ${lw.count} phiên, ${formatMinutes(lw.minutes)} phút${lw.avgRating ? `, chất lượng TB ${numberFormatter.format(lw.avgRating)}/5` : ""}`,
+    lw.count > 0
+      ? `- Thay đổi: số phiên ${pctChange(tw.count, lw.count)}, thời lượng ${pctChange(tw.minutes, lw.minutes)}`
+      : "- Tuần trước không có dữ liệu để so sánh."
+  ].join("\n");
 };
 
 const buildTaskHighlights = (tasks) =>
@@ -166,37 +229,49 @@ const buildStreakInfo = (sessions) => {
   return { currentStreak, longestStreak, daysSinceLast: daysSinceLast ?? 999, minutesLast7Days, nextMilestone };
 };
 
-const buildPrompt = ({ sessions, sessionSummary, taskHighlights, projectSummary, streakInfo }) => {
-  // Hướng dẫn định dạng đặt ở đầu prompt để Gemini tuân thủ triệt để
+const buildPrompt = ({ sessions, sessionSummary, sessionDetails, weekComparison, taskHighlights, projectSummary, streakInfo }) => {
   const formatInstruction = `QUAN TRỌNG VỀ ĐỊNH DẠNG:
 - Trả lời hoàn toàn bằng tiếng Việt.
 - Dùng dấu gạch đầu dòng (-) cho các bullet point, KHÔNG dùng ký tự đặc biệt hay LaTeX.
 - Đánh dấu tiêu đề các mục bằng **in đậm** (dấu ** hai bên), không dùng # hay ký hiệu khác.
 - TUYỆT ĐỐI KHÔNG dùng: $, \\, ký tự LaTeX, HTML, hay bất kỳ ký hiệu markup nào ngoài ** và -.
-- Giữ câu ngắn gọn, súc tích, thân thiện.
+- Viết chi tiết, phân tích sâu, đưa ra nhận xét cụ thể có dẫn chứng từ dữ liệu.
+- Mỗi bullet point nên có 1-2 câu giải thích, không chỉ liệt kê.
 
 `;
 
   if (sessions.length === 0) {
-    return `${formatInstruction}Người dùng chưa có phiên Deep Work nào đạt tối thiểu ${MIN_DURATION_MINUTES} phút. Hãy gợi ý 3 lời khuyên ngắn gọn bằng tiếng Việt giúp họ bắt đầu xây dựng thói quen làm việc tập trung.`;
+    return `${formatInstruction}Người dùng chưa có phiên Deep Work nào đạt tối thiểu ${MIN_DURATION_MINUTES} phút. Hãy gợi ý 5 lời khuyên chi tiết bằng tiếng Việt giúp họ bắt đầu xây dựng thói quen làm việc tập trung, dựa trên nghiên cứu khoa học về Deep Work của Cal Newport.`;
   }
 
   const longestSession = sessionSummary.longestSession
     ? `Phiên dài nhất: ${sessionSummary.longestSession.duration} phút cho mục tiêu "${sessionSummary.longestSession.goal || "Không ghi mục tiêu"}" vào ${dayjs(sessionSummary.longestSession.startTime).format("DD/MM HH:mm")} (dự án ${sessionSummary.longestSession.project}).`
     : "Chưa xác định được phiên dài nhất.";
 
+  // Rating summary
+  const ratingLine = sessionSummary.avgRating
+    ? `- Chất lượng tập trung trung bình: ${numberFormatter.format(sessionSummary.avgRating)}/5 (${sessionSummary.ratedCount} phiên đã đánh giá). Phân bố: ${sessionSummary.ratingBuckets.high} phiên tốt (4-5), ${sessionSummary.ratingBuckets.mid} phiên trung bình (3), ${sessionSummary.ratingBuckets.low} phiên kém (1-2).`
+    : "- Chưa có đánh giá chất lượng tập trung nào (focusRating). Người dùng nên đánh giá sau mỗi phiên.";
+
   const sessionOverview = [
     `- ${sessionSummary.totals.count} phiên, tổng ${formatMinutes(sessionSummary.totals.minutes)} phút.`,
     `- Thời lượng trung bình: ${formatMinutes(sessionSummary.averageDuration)} phút/phiên.`,
-    `- Tỷ lệ đạt mục tiêu thời gian: ${numberFormatter.format(sessionSummary.completionRate)}%.`,
-    `- Trung bình ${numberFormatter.format(sessionSummary.avgDistractions)} lần xao nhãng/phiên.`,
+    `- Tỷ lệ đạt mục tiêu thời gian (≥95% durationSet): ${numberFormatter.format(sessionSummary.completionRate)}%.`,
+    ratingLine,
     `- ${longestSession}`
   ].join("\n");
 
   const segmentLines =
     sessionSummary.segments.length > 0
-      ? sessionSummary.segments.map((seg) => `- ${seg.label}: ${seg.sessions} phiên, ${formatMinutes(seg.minutes)} phút, đạt mục tiêu ${seg.goalRate}%, xao nhãng TB ${numberFormatter.format(seg.avgDistractions)} lần`).join("\n")
+      ? sessionSummary.segments.map((seg) => {
+        const ratingStr = seg.avgRating ? `, chất lượng TB ${numberFormatter.format(seg.avgRating)}/5` : "";
+        return `- ${seg.label}: ${seg.sessions} phiên, ${formatMinutes(seg.minutes)} phút, đạt mục tiêu ${seg.goalRate}%${ratingStr}`;
+      }).join("\n")
       : "Chưa đủ dữ liệu để phân loại phiên theo khung giờ.";
+
+  const sessionDetailLines = sessionDetails.length > 0
+    ? sessionDetails.join("\n")
+    : "Không có chi tiết phiên.";
 
   const taskNotes = taskHighlights.length > 0 ? taskHighlights.join("\n") : "Không có ghi chú tiến độ hoặc checklist nào nổi bật.";
   const projectLines = projectSummary.length > 0 ? projectSummary.join("\n") : "Chưa ghi nhận dữ liệu dự án cụ thể.";
@@ -208,10 +283,16 @@ const buildPrompt = ({ sessions, sessionSummary, taskHighlights, projectSummary,
     `- Mốc tiếp theo: ${streakInfo.nextMilestone}`
   ].join("\n");
 
-  return `${formatInstruction}Dưới đây là dữ liệu gần đây về các phiên Deep Work (đã loại bỏ phiên dưới ${MIN_DURATION_MINUTES} phút):
+  return `${formatInstruction}Bạn là chuyên gia về Deep Work (phương pháp của Cal Newport) và coaching năng suất. Dưới đây là dữ liệu chi tiết về các phiên Deep Work gần đây của người dùng:
 
 **TỔNG QUAN HIỆU SUẤT**
 ${sessionOverview}
+
+**SO SÁNH TUẦN NÀY VS TUẦN TRƯỚC**
+${weekComparison}
+
+**CHI TIẾT ${sessionDetails.length} PHIÊN GẦN NHẤT**
+${sessionDetailLines}
 
 **PHÂN BỐ THEO KHUNG GIỜ**
 ${segmentLines}
@@ -225,12 +306,17 @@ ${projectLines}
 **ĐỘNG LỰC VÀ STREAK**
 ${streakLines}
 
-Hãy phân tích và trả lời theo đúng cấu trúc sau (dùng ** cho tiêu đề, dùng - cho bullet):
+Hãy phân tích CHI TIẾT và trả lời theo cấu trúc sau (dùng ** cho tiêu đề, dùng - cho bullet). Mỗi bullet phải có giải thích cụ thể dựa trên dữ liệu, không chỉ liệt kê:
 
-**Điểm nổi bật** (ít nhất 3 bullet) về thói quen tập trung hiện tại.
-**Điểm nghẽn** (ít nhất 3 bullet) dựa trên checklist, khung giờ yếu, xao nhãng, dự án chậm.
-**Kế hoạch tuần tới** (đúng 3 gợi ý hành động, mỗi gợi ý có mục tiêu cụ thể và cách đo lường).
-Kết thúc bằng một câu khích lệ ngắn gắn với streak hiện tại.`;
+**Điểm nổi bật** (4-5 bullet) — những gì người dùng đang làm tốt, dẫn chứng số liệu cụ thể (ví dụ: "Phiên ngày XX/XX đạt XX phút với chất lượng X/5, cho thấy...").
+
+**Phân tích chất lượng tập trung** (3-4 bullet) — nhận xét về focusRating trung bình, xu hướng tăng/giảm, khung giờ nào chất lượng cao nhất, mục tiêu phiên có đủ rõ ràng không (dựa trên nội dung goal).
+
+**Điểm cần cải thiện** (3-4 bullet) — dựa trên: phiên ngắn hơn mục tiêu, rating thấp, khung giờ yếu, mục tiêu phiên chung chung, so sánh tuần.
+
+**Kế hoạch tuần tới** (đúng 3 gợi ý hành động) — mỗi gợi ý phải có: hành động cụ thể, mục tiêu đo lường được, và lý do dựa trên dữ liệu.
+
+Kết thúc bằng 1-2 câu khích lệ cá nhân hóa gắn với streak và thành tích nổi bật nhất.`;
 };
 
 export const generateInsights = async (req, res, next) => {
@@ -246,7 +332,7 @@ export const generateInsights = async (req, res, next) => {
       model: "gemini-2.5-flash",
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 1024
+        maxOutputTokens: 3072
       }
     });
 
@@ -282,11 +368,13 @@ export const generateInsights = async (req, res, next) => {
 
     const taskMap = new Map(recentTasks.map((t) => [t._id.toString(), t]));
     const sessionSummary = summarizeSessions(eligibleSessions, taskMap);
+    const sessionDetails = buildSessionDetails(eligibleSessions);
+    const weekComparison = buildWeekComparison(eligibleSessions);
     const taskHighlights = buildTaskHighlights(recentTasks);
     const projectSummary = buildProjectSummary(eligibleSessions, recentTasks);
     const streakInfo = buildStreakInfo(eligibleSessions);
 
-    const prompt = buildPrompt({ sessions: eligibleSessions, sessionSummary, taskHighlights, projectSummary, streakInfo });
+    const prompt = buildPrompt({ sessions: eligibleSessions, sessionSummary, sessionDetails, weekComparison, taskHighlights, projectSummary, streakInfo });
 
     const result = await model.generateContent(prompt);
     const suggestion = result.response.text()?.trim() || "Chưa nhận được phản hồi từ dịch vụ AI. Vui lòng thử lại.";
