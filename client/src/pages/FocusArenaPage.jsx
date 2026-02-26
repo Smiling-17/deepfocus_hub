@@ -354,6 +354,8 @@ const FocusArenaPage = () => {
     background: `conic-gradient(#38bdf8 ${progressAngle}deg, rgba(255,255,255,0.08) ${progressAngle}deg)`
   };
 
+  const hasVideo = Boolean(session.youtubeVideoId);
+
   const timerProps = {
     session,
     hasVideo,
@@ -365,8 +367,6 @@ const FocusArenaPage = () => {
     onCompleteSession: handleCompleteSession,
     onToggleImmersive: handleToggleImmersive
   };
-
-  const hasVideo = Boolean(session.youtubeVideoId);
 
   // ── Immersive fullscreen layout ───────────────────────────────────────────
   if (isImmersive) {
