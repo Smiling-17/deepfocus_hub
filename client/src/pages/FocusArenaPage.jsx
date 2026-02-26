@@ -46,7 +46,7 @@ const TimerExperience = ({
     ? "relative flex h-[90vh] w-full max-w-[60rem] flex-col items-center justify-between overflow-hidden rounded-[48px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_50px_120px_-60px_rgba(15,23,42,0.9)]"
     : "relative flex min-h-[32rem] flex-1 flex-col items-center justify-between overflow-hidden rounded-[40px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_40px_85px_-45px_rgba(15,23,42,0.85)]";
   const timerClass = immersive
-    ? "relative mx-auto flex aspect-square w-full max-w-[46rem] max-h-[55vh] items-center justify-center sm:max-w-[50rem]"
+    ? "relative mx-auto flex flex-shrink-0 w-[min(46rem,55vh)] h-[min(46rem,55vh)] items-center justify-center"
     : "relative mx-auto flex aspect-square w-full max-w-[34rem] items-center justify-center sm:max-w-[38rem]";
 
   return (
