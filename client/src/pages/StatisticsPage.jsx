@@ -44,7 +44,9 @@ const StatisticsPage = () => {
     setInsight(null);
     setIsLoadingInsights(true);
     try {
-      const response = await apiClient.post("/insights/analyze", {});
+      const response = await apiClient.post("/insights/analyze", {}, {
+        timeout: 60000 // 60 giây chờ AI xử lý
+      });
       setInsight(response.data);
     } catch (err) {
       setInsightError(getErrorMessage(err));
