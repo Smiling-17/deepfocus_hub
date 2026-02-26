@@ -46,7 +46,7 @@ const TimerExperience = ({
     ? "relative flex h-[90vh] w-full max-w-[60rem] flex-col items-center justify-between overflow-hidden rounded-[48px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_50px_120px_-60px_rgba(15,23,42,0.9)]"
     : "relative flex min-h-[32rem] flex-1 flex-col items-center justify-between overflow-hidden rounded-[40px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_40px_85px_-45px_rgba(15,23,42,0.85)]";
   const timerClass = immersive
-    ? "relative mx-auto flex aspect-square w-full max-w-[46rem] items-center justify-center sm:max-w-[50rem]"
+    ? "relative mx-auto flex aspect-square w-full max-w-[46rem] max-h-[55vh] items-center justify-center sm:max-w-[50rem]"
     : "relative mx-auto flex aspect-square w-full max-w-[34rem] items-center justify-center sm:max-w-[38rem]";
 
   return (
@@ -64,7 +64,7 @@ const TimerExperience = ({
         </button>
       </div>
 
-      <header className="relative z-10 flex w-full flex-col items-center gap-4 px-6 pt-16 text-center sm:px-10">
+      <header className={`relative z-10 flex w-full flex-col items-center gap-4 px-6 text-center sm:px-10 ${immersive ? "pt-8" : "pt-16"}`}>
         <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs uppercase tracking-[0.4em] text-cyan-100 backdrop-blur">
           KHÔNG GIAN TẬP TRUNG
         </span>
@@ -77,7 +77,7 @@ const TimerExperience = ({
         </p>
       </header>
 
-      <div className="relative z-10 flex w-full flex-1 items-center justify-center px-6 pb-12">
+      <div className={`relative z-10 flex w-full flex-1 items-center justify-center px-6 ${immersive ? "pb-6" : "pb-12"}`}>
         <div className={timerClass}>
           <div
             className="absolute inset-0 rounded-full p-2 shadow-[0_0_60px_rgba(14,116,144,0.45)]"
