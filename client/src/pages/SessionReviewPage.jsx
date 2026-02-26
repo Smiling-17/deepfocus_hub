@@ -140,11 +140,10 @@ const SessionReviewPage = () => {
               {[1, 2, 3, 4, 5].map((value) => (
                 <label
                   key={value}
-                  className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-primary ${
-                    rating === value
+                  className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-primary ${rating === value
                       ? "border-primary bg-primary/10 text-primary-dark dark:border-primary-light dark:text-primary-light"
                       : "border-slate-300 text-slate-600 hover:border-primary/60 hover:text-primary dark:border-slate-700 dark:text-slate-300"
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -206,15 +205,9 @@ const SessionReviewPage = () => {
           </p>
         )}
 
-        <div className="rounded-2xl bg-slate-100 px-4 py-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-          <p>
-            Số lần tạm dừng: <strong>{session.pauseEvents?.length || 0}</strong> · Xao nhãng:{" "}
-            <strong>{session.distractionTimestamps?.length || 0}</strong>
-          </p>
-          <p className="mt-2">
-            Các đánh giá này sẽ giúp DeepFocus Hub hiểu thói quen tập trung của bạn để gợi ý chính xác hơn ở mục Thống kê.
-          </p>
-        </div>
+        <p className="rounded-2xl bg-slate-100 px-4 py-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+          Đánh giá trung thực về mức độ tập trung sẽ giúp AI hiểu thói quen của bạn và gợi ý chính xác hơn.
+        </p>
       </aside>
     </section>
   );

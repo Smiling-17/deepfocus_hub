@@ -7,8 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient, getErrorMessage } from "../utils/apiClient.js";
 
-const MAX_PAUSE_SECONDS = 180;
-
 const formatTimer = (seconds) => {
   const safe = Math.max(0, seconds);
   const mins = Math.floor(safe / 60).toString().padStart(2, "0");
@@ -17,28 +15,17 @@ const formatTimer = (seconds) => {
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   TimerExperience is defined at MODULE LEVEL (outside FocusArenaPage).
-   
-   WHY: If it were defined inside the render function, JavaScript would create
-   a brand-new function reference on every re-render (i.e. every second due to
-   the setInterval). React would treat it as a completely different component
-   type, causing it to unmount the old tree and mount a fresh one each second —
-   producing the visible flicker. Hoisting it here gives it a single, stable
-   reference for the entire lifetime of the app.
+   TimerExperience — module level to prevent unmount/remount flicker.
+   All state lives in FocusArenaPage; this component is purely presentational.
 ───────────────────────────────────────────────────────────────────────────── */
 const TimerExperience = ({
   immersive,
   session,
   remainingSeconds,
-  isPaused,
-  pauseCount,
-  pauseCountdown,
   completionPercent,
   timerRingStyle,
   actionMessage,
   isCompleting,
-  onPauseToggle,
-  onLogDistraction,
   onCompleteSession,
   onToggleImmersive
 }) => {
@@ -95,42 +82,10 @@ const TimerExperience = ({
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-6 flex w-full items-center justify-center">
-            <div className="flex w-full max-w-sm items-center justify-between rounded-full bg-white/10 px-6 py-3 text-xs text-white/70 backdrop-blur">
-              <span>
-                Bắt đầu: {formatVietnamTime(session.startTime, "HH:mm:ss")}
-              </span>
-              <span>Hoàn thành: {completionPercent}%</span>
-            </div>
-          </div>
         </div>
       </div>
 
-      <div className="relative z-10 flex w-full flex-col items-center gap-3 px-6 pb-10 sm:flex-row sm:justify-center sm:gap-4">
-        <button
-          type="button"
-          onClick={onPauseToggle}
-          className="focus-control-btn bg-white/15 text-white hover:bg-white/25"
-        >
-          {isPaused ? "Tiếp tục" : `Tạm dừng (${pauseCount}/2)`}
-          {isPaused && (
-            <span className="ml-2 text-xs text-white/80">
-              {formatTimer(pauseCountdown)}
-            </span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={onLogDistraction}
-          className="focus-control-btn bg-amber-300/20 text-amber-100 hover:bg-amber-300/30"
-        >
-          Tôi bị xao nhãng
-          <span className="ml-2 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-black/20 px-2 text-[11px] font-semibold">
-            {session.distractionTimestamps?.length || 0}
-          </span>
-        </button>
-
+      <div className="relative z-10 flex w-full items-center justify-center px-6 pb-10">
         <button
           type="button"
           onClick={() => onCompleteSession(false)}
@@ -154,17 +109,15 @@ const TimerExperience = ({
 
 /* ─────────────────────────────────────────────────────────────────────────────
    FocusArenaPage — manages all state, refs, and side-effects.
-   Derived display values and stable handler callbacks are passed down to
-   TimerExperience as props.
 ───────────────────────────────────────────────────────────────────────────── */
 const FocusArenaPage = () => {
   const navigate = useNavigate();
+
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [remainingSeconds, setRemainingSeconds] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [pauseCountdown, setPauseCountdown] = useState(MAX_PAUSE_SECONDS);
   const [notes, setNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [noteSavedMessage, setNoteSavedMessage] = useState("");
@@ -172,23 +125,26 @@ const FocusArenaPage = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isImmersive, setIsImmersive] = useState(false);
 
-  const completionTriggerRef = useRef(false);
   const timerRef = useRef(null);
-  const pauseRef = useRef(null);
-  const pauseStartRef = useRef(null);
+  const completionTriggerRef = useRef(false);
 
-  // ── Load active session on mount ──────────────────────────────────────────
+  // ── Fetch active session on mount ─────────────────────────────────────────
   useEffect(() => {
-    const loadSession = async () => {
-      setLoading(true);
-      setError("");
+    const fetchSession = async () => {
       try {
         const response = await apiClient.get("/sessions/active");
         if (!response.data) {
           setSession(null);
-        } else {
-          initializeSession(response.data);
+          return;
         }
+        const data = response.data;
+        const totalSeconds = (data.durationSet || 50) * 60;
+        const startMs = new Date(data.startTime).getTime();
+        const elapsedFromStart = Math.floor((Date.now() - startMs) / 1000);
+        const initialRemaining = Math.max(0, totalSeconds - elapsedFromStart);
+        setSession(data);
+        setNotes(data.quickNotes || "");
+        setRemainingSeconds(initialRemaining);
       } catch (err) {
         setError(getErrorMessage(err));
       } finally {
@@ -196,47 +152,12 @@ const FocusArenaPage = () => {
       }
     };
 
-    loadSession();
-
-    return () => {
-      clearInterval(timerRef.current);
-      clearInterval(pauseRef.current);
-    };
+    fetchSession();
   }, []);
-
-  const initializeSession = (sessionData) => {
-    setSession(sessionData);
-    setNotes(sessionData.quickNotes || "");
-    setActionMessage("");
-    completionTriggerRef.current = false;
-
-    const totalSeconds = (sessionData.durationSet || 50) * 60;
-    const completedSeconds = (sessionData.durationCompleted || 0) * 60;
-
-    const pauseSeconds = (sessionData.pauseEvents || []).reduce(
-      (total, event) => total + (event.durationSeconds || 0),
-      0
-    );
-
-    const elapsedFromStart = Math.max(
-      0,
-      toVietnamTime().diff(toVietnamTime(sessionData.startTime), "second") -
-      pauseSeconds
-    );
-
-    const initialRemaining = Math.max(
-      0,
-      totalSeconds - Math.max(elapsedFromStart, completedSeconds)
-    );
-
-    setRemainingSeconds(initialRemaining);
-    setIsPaused(false);
-    setPauseCountdown(MAX_PAUSE_SECONDS);
-  };
 
   // ── Main countdown interval ───────────────────────────────────────────────
   useEffect(() => {
-    if (!session || isPaused) {
+    if (!session) {
       clearInterval(timerRef.current);
       return undefined;
     }
@@ -252,21 +173,16 @@ const FocusArenaPage = () => {
     }, 1000);
 
     return () => clearInterval(timerRef.current);
-  }, [session, isPaused]);
+  }, [session]);
 
   // ── Auto-complete when timer reaches 0 ────────────────────────────────────
   useEffect(() => {
-    if (
-      session &&
-      remainingSeconds <= 0 &&
-      !completionTriggerRef.current &&
-      !isPaused
-    ) {
+    if (session && remainingSeconds <= 0 && !completionTriggerRef.current) {
       handleCompleteSession(true);
       completionTriggerRef.current = true;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remainingSeconds, session, isPaused]);
+  }, [remainingSeconds, session]);
 
   // ── Immersive mode: lock body scroll ─────────────────────────────────────
   useEffect(() => {
@@ -297,13 +213,18 @@ const FocusArenaPage = () => {
     };
   }, [isImmersive]);
 
-  // ── Derived values ────────────────────────────────────────────────────────
-  const pauseCount = useMemo(
-    () => session?.pauseEvents?.length || 0,
-    [session]
-  );
+  // ── Keep-alive: ping server every 10 min so Render free tier stays awake ─
+  useEffect(() => {
+    if (!session) return undefined;
 
-  // ── Audio helper (not a handler, no need for useCallback) ─────────────────
+    const keepAlive = setInterval(() => {
+      apiClient.get("/").catch(() => { }); // fire-and-forget, ignore errors
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => clearInterval(keepAlive);
+  }, [session]);
+
+  // ── Audio helper ──────────────────────────────────────────────────────────
   const playCompletionSound = () => {
     try {
       const audio = new Audio(
@@ -315,89 +236,7 @@ const FocusArenaPage = () => {
     }
   };
 
-  // ── Handlers — all wrapped in useCallback so TimerExperience's props
-  //    stay referentially stable between renders, preventing unnecessary
-  //    re-renders of the (now-hoisted) TimerExperience component.
-  // ─────────────────────────────────────────────────────────────────────────
-
-  const resumeFromPause = useCallback(
-    async (autoResume) => {
-      clearInterval(pauseRef.current);
-      const startedAt = pauseStartRef.current;
-      const endedAt = new Date();
-
-      if (!startedAt) {
-        setIsPaused(false);
-        return;
-      }
-
-      try {
-        const response = await apiClient.patch(
-          `/sessions/${session._id}/pause`,
-          { startedAt, endedAt }
-        );
-        setSession(response.data);
-        setIsPaused(false);
-        setActionMessage(
-          autoResume
-            ? "Tạm dừng đã kết thúc sau 3 phút. Bạn tiếp tục nhé!"
-            : "Bạn đã quay lại phiên tập trung. Tuyệt vời!"
-        );
-      } catch (err) {
-        setActionMessage(getErrorMessage(err));
-        setIsPaused(false);
-      } finally {
-        pauseStartRef.current = null;
-        setPauseCountdown(MAX_PAUSE_SECONDS);
-      }
-    },
-    [session]
-  );
-
-  const handlePauseToggle = useCallback(async () => {
-    if (!session) return;
-
-    if (!isPaused) {
-      if (pauseCount >= 2) {
-        setActionMessage("Bạn chỉ có thể tạm dừng tối đa 2 lần cho mỗi phiên.");
-        return;
-      }
-      pauseStartRef.current = new Date();
-      setIsPaused(true);
-      setActionMessage("Phiên đã được tạm dừng. Thời gian tối đa 03:00.");
-      setPauseCountdown(MAX_PAUSE_SECONDS);
-
-      pauseRef.current = setInterval(() => {
-        setPauseCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(pauseRef.current);
-            resumeFromPause(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      resumeFromPause(false);
-    }
-  }, [session, isPaused, pauseCount, resumeFromPause]);
-
-  const handleLogDistraction = useCallback(async () => {
-    if (!session) return;
-    try {
-      const response = await apiClient.patch(
-        `/sessions/${session._id}/distraction`,
-        {}
-      );
-      setSession(response.data);
-      setActionMessage("Đã ghi lại thời điểm bạn bị xao nhãng.");
-    } catch (err) {
-      setActionMessage(getErrorMessage(err));
-    }
-  }, [session]);
-
-  // handleNotesSave is only called from the sidebar (not passed to TimerExperience),
-  // so useCallback here is optional — kept plain for simplicity.
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleNotesSave = async () => {
     if (!session) return;
     setIsSavingNotes(true);
@@ -422,7 +261,6 @@ const FocusArenaPage = () => {
 
       completionTriggerRef.current = true;
       clearInterval(timerRef.current);
-      clearInterval(pauseRef.current);
       setIsCompleting(true);
       try {
         const totalSeconds = (session.durationSet || 50) * 60;
@@ -499,13 +337,11 @@ const FocusArenaPage = () => {
     );
   }
 
-  // ── Derived display values (computed once per render, passed as props) ────
+  // ── Derived display values ────────────────────────────────────────────────
+  const totalSeconds = (session.durationSet || 50) * 60;
   const remainingPercentage = Math.max(
     0,
-    Math.min(
-      100,
-      Math.round((remainingSeconds / ((session.durationSet || 50) * 60)) * 100)
-    )
+    Math.min(100, Math.round((remainingSeconds / totalSeconds) * 100))
   );
   const completionPercent = 100 - remainingPercentage;
   const progressAngle = Math.max(0, Math.min(360, (completionPercent / 100) * 360));
@@ -513,19 +349,13 @@ const FocusArenaPage = () => {
     background: `conic-gradient(#38bdf8 ${progressAngle}deg, rgba(255,255,255,0.08) ${progressAngle}deg)`
   };
 
-  // Collect all props for TimerExperience in one object to keep JSX clean
   const timerProps = {
     session,
     remainingSeconds,
-    isPaused,
-    pauseCount,
-    pauseCountdown,
     completionPercent,
     timerRingStyle,
     actionMessage,
     isCompleting,
-    onPauseToggle: handlePauseToggle,
-    onLogDistraction: handleLogDistraction,
     onCompleteSession: handleCompleteSession,
     onToggleImmersive: handleToggleImmersive
   };
@@ -572,53 +402,6 @@ const FocusArenaPage = () => {
             </button>
             {noteSavedMessage && <span>{noteSavedMessage}</span>}
           </div>
-        </section>
-
-        <section className="glass-panel space-y-4">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-            Nhịp phiên hiện tại
-          </h2>
-          <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-            <li className="flex items-center justify-between rounded-xl bg-white/60 px-4 py-2 dark:bg-slate-900/60">
-              <span>Bắt đầu</span>
-              <span className="font-semibold">
-                {formatVietnamDateTime(session.startTime, "HH:mm DD/MM")}
-              </span>
-            </li>
-            <li className="flex items-center justify-between rounded-xl bg-white/60 px-4 py-2 dark:bg-slate-900/60">
-              <span>Xao nhãng đã ghi</span>
-              <span className="font-semibold">
-                {session.distractionTimestamps?.length || 0} lần
-              </span>
-            </li>
-            <li className="flex items-center justify-between rounded-xl bg-white/60 px-4 py-2 dark:bg-slate-900/60">
-              <span>Thời lượng tạm dừng</span>
-              <span className="font-semibold">
-                {(session.pauseEvents || []).reduce(
-                  (sum, event) => sum + (event.durationSeconds || 0),
-                  0
-                )}{" "}
-                giây
-              </span>
-            </li>
-          </ul>
-          {session.distractionTimestamps?.length > 0 && (
-            <div className="rounded-xl bg-white/60 px-4 py-3 text-xs text-slate-600 dark:bg-slate-900/60 dark:text-slate-300">
-              <p className="mb-2 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-200">
-                Mốc xao nhãng
-              </p>
-              <ul className="space-y-1">
-                {session.distractionTimestamps.map((timestamp, index) => (
-                  <li key={timestamp}>
-                    Lần {index + 1}: {formatVietnamTime(timestamp, "HH:mm:ss")}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <p className="rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 px-4 py-3 text-xs text-slate-600 dark:from-slate-800 dark:to-slate-900 dark:text-slate-200">
-            Đồng hồ chạm 00:00 sẽ tự chuyển sang màn hình đánh giá. Hãy để nhịp tập trung dẫn dắt bạn!
-          </p>
         </section>
       </aside>
     </section>

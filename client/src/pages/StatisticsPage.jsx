@@ -3,6 +3,7 @@ import {
   formatVietnamDateTime
 } from "../utils/dayjs.js";
 import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { apiClient, getErrorMessage } from "../utils/apiClient.js";
 
 const formatHours = (minutes) => Number((minutes / 60).toFixed(1));
@@ -321,7 +322,41 @@ const StatisticsPage = () => {
             <p className="text-xs uppercase tracking-wide text-primary">
               Gợi ý ngày {formatVietnamDate(insight.generatedAt, "DD/MM/YYYY")}
             </p>
-            <pre className="whitespace-pre-wrap font-sans">{insight.suggestion}</pre>
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => (
+                  <p className="mb-2 leading-relaxed">{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-slate-900 dark:text-slate-50">
+                    {children}
+                  </strong>
+                ),
+                ul: ({ children }) => (
+                  <ul className="my-2 space-y-1 pl-4">{children}</ul>
+                ),
+                ol: ({ children }) => (
+                  <ol className="my-2 space-y-1 pl-4 list-decimal">{children}</ol>
+                ),
+                li: ({ children }) => (
+                  <li className="flex gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-primary" />
+                    <span>{children}</span>
+                  </li>
+                ),
+                h1: ({ children }) => (
+                  <h3 className="mt-4 mb-1 font-bold text-slate-900 dark:text-slate-50">{children}</h3>
+                ),
+                h2: ({ children }) => (
+                  <h3 className="mt-4 mb-1 font-bold text-slate-900 dark:text-slate-50">{children}</h3>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="mt-3 mb-1 font-semibold text-slate-800 dark:text-slate-100">{children}</h3>
+                )
+              }}
+            >
+              {insight.suggestion}
+            </ReactMarkdown>
           </div>
         ) : (
           <p className="text-sm text-slate-500 dark:text-slate-300">
