@@ -113,6 +113,10 @@ const SessionReviewPage = () => {
           )}
         </header>
 
+        <div className="rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-700 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+          🧠 Não bộ cần nghỉ ngơi sau mỗi khối tập trung sâu. Hãy nghỉ <strong>5–10 phút</strong> trước khi bắt đầu phiên tiếp theo để duy trì hiệu suất tối ưu.
+        </div>
+
         <section className="rounded-2xl bg-slate-100 px-5 py-4 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-200">
           <p>
             <strong>Mục tiêu:</strong> {session.goal}
@@ -141,8 +145,8 @@ const SessionReviewPage = () => {
                 <label
                   key={value}
                   className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-primary ${rating === value
-                      ? "border-primary bg-primary/10 text-primary-dark dark:border-primary-light dark:text-primary-light"
-                      : "border-slate-300 text-slate-600 hover:border-primary/60 hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                    ? "border-primary bg-primary/10 text-primary-dark dark:border-primary-light dark:text-primary-light"
+                    : "border-slate-300 text-slate-600 hover:border-primary/60 hover:text-primary dark:border-slate-700 dark:text-slate-300"
                     }`}
                 >
                   <input

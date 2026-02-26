@@ -9,25 +9,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiClient, getErrorMessage } from "../utils/apiClient.js";
 
-const MAX_SUBTASKS_PER_TASK = 8;
-
-const createBlankSubTask = () => ({
-  id:
-    typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `subtask-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  title: "",
-  isCompleted: false
-});
 
 const createDefaultTaskForm = () => ({
   title: "",
-  project: "",
   startTime: "09:00",
-  endTime: "10:00",
-  subTasks: [createBlankSubTask()],
-  progressNote: ""
+  endTime: "10:00"
 });
+
 
 const defaultGoalForm = {
   taskId: null,
@@ -58,11 +46,6 @@ const DashboardPage = () => {
   const [taskFormErrors, setTaskFormErrors] = useState({});
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [taskSuccessMessage, setTaskSuccessMessage] = useState("");
-  const [progressNoteDrafts, setProgressNoteDrafts] = useState({});
-  const [noteSaving, setNoteSaving] = useState({});
-  const [noteFeedback, setNoteFeedback] = useState({});
-  const [subTaskUpdating, setSubTaskUpdating] = useState({});
-  const noteFeedbackTimeouts = useRef({});
 
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [goalForm, setGoalForm] = useState(defaultGoalForm);
@@ -86,22 +69,6 @@ const DashboardPage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    setProgressNoteDrafts(
-      tasks.reduce((accumulator, task) => {
-        accumulator[task._id] = task.progressNote || "";
-        return accumulator;
-      }, {})
-    );
-  }, [tasks]);
-
-  useEffect(() => {
-    return () => {
-      Object.values(noteFeedbackTimeouts.current).forEach((timeoutId) =>
-        clearTimeout(timeoutId)
-      );
-    };
-  }, []);
 
   const fetchTasks = async (date) => {
     setIsLoadingTasks(true);
@@ -158,38 +125,6 @@ const DashboardPage = () => {
     setTaskForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleTaskSubTaskChange = (subTaskId, value) => {
-    setTaskForm((prev) => ({
-      ...prev,
-      subTasks: prev.subTasks.map((subTask) =>
-        subTask.id === subTaskId ? { ...subTask, title: value } : subTask
-      )
-    }));
-  };
-
-  const handleAddSubTaskField = () => {
-    setTaskForm((prev) => {
-      if (prev.subTasks.length >= MAX_SUBTASKS_PER_TASK) {
-        return prev;
-      }
-      return {
-        ...prev,
-        subTasks: [...prev.subTasks, createBlankSubTask()]
-      };
-    });
-  };
-
-  const handleRemoveSubTaskField = (subTaskId) => {
-    setTaskForm((prev) => {
-      const remaining = prev.subTasks.filter(
-        (subTask) => subTask.id !== subTaskId
-      );
-      return {
-        ...prev,
-        subTasks: remaining.length > 0 ? remaining : [createBlankSubTask()]
-      };
-    });
-  };
 
   const handleCreateTask = async (event) => {
     event.preventDefault();
@@ -209,20 +144,10 @@ const DashboardPage = () => {
         `${selectedDate}T${taskForm.endTime}`,
         VIETNAM_TIMEZONE
       );
-      const subTasksPayload = taskForm.subTasks
-        .map((subTask) => ({
-          title: subTask.title.trim(),
-          isCompleted: false
-        }))
-        .filter((subTask) => subTask.title.length > 0);
-
       await apiClient.post("/tasks", {
         title: taskForm.title.trim(),
-        project: taskForm.project.trim(),
         startTime: start.toISOString(),
-        endTime: end.toISOString(),
-        subTasks: subTasksPayload,
-        progressNote: taskForm.progressNote.trim()
+        endTime: end.toISOString()
       });
 
       setTaskForm(createDefaultTaskForm());
@@ -255,93 +180,6 @@ const DashboardPage = () => {
       setTasks((prev) => prev.filter((task) => task._id !== taskId));
     } catch (error) {
       setTaskError(getErrorMessage(error));
-    }
-  };
-
-  const handleToggleSubTask = async (taskId, subTaskId, isCompleted) => {
-    setSubTaskUpdating((prev) => ({ ...prev, [taskId]: true }));
-    try {
-      const task = tasks.find((item) => item._id === taskId);
-      if (!task) {
-        return;
-      }
-
-      const updatedSubTasks = task.subTasks.map((subTask) =>
-        subTask._id === subTaskId
-          ? { ...subTask, isCompleted }
-          : subTask
-      );
-
-      const response = await apiClient.patch(`/tasks/${taskId}`, {
-        subTasks: updatedSubTasks.map(({ _id, title, isCompleted: done }) => ({
-          _id,
-          title,
-          isCompleted: done
-        }))
-      });
-
-      setTasks((prev) =>
-        prev.map((item) => (item._id === taskId ? response.data : item))
-      );
-    } catch (error) {
-      setTaskError(getErrorMessage(error));
-    } finally {
-      setSubTaskUpdating((prev) => ({ ...prev, [taskId]: false }));
-    }
-  };
-
-  const handleProgressNoteChange = (taskId, value) => {
-    setProgressNoteDrafts((prev) => ({
-      ...prev,
-      [taskId]: value
-    }));
-  };
-
-  const handleSaveProgressNote = async (taskId) => {
-    const note = (progressNoteDrafts[taskId] || "").trim();
-    setNoteSaving((prev) => ({ ...prev, [taskId]: true }));
-    try {
-      const response = await apiClient.patch(`/tasks/${taskId}`, {
-        progressNote: note
-      });
-
-      setTasks((prev) =>
-        prev.map((task) => (task._id === taskId ? response.data : task))
-      );
-      setNoteFeedback((prev) => ({
-        ...prev,
-        [taskId]: "Đã lưu ghi chú tiến độ."
-      }));
-      if (noteFeedbackTimeouts.current[taskId]) {
-        clearTimeout(noteFeedbackTimeouts.current[taskId]);
-      }
-      noteFeedbackTimeouts.current[taskId] = setTimeout(() => {
-        setNoteFeedback((prev) => {
-          const next = { ...prev };
-          delete next[taskId];
-          return next;
-        });
-        delete noteFeedbackTimeouts.current[taskId];
-      }, 2000);
-    } catch (error) {
-      setTaskError(getErrorMessage(error));
-      setNoteFeedback((prev) => ({
-        ...prev,
-        [taskId]: "Không thể lưu, vui lòng thử lại."
-      }));
-      if (noteFeedbackTimeouts.current[taskId]) {
-        clearTimeout(noteFeedbackTimeouts.current[taskId]);
-      }
-      noteFeedbackTimeouts.current[taskId] = setTimeout(() => {
-        setNoteFeedback((prev) => {
-          const next = { ...prev };
-          delete next[taskId];
-          return next;
-        });
-        delete noteFeedbackTimeouts.current[taskId];
-      }, 4000);
-    } finally {
-      setNoteSaving((prev) => ({ ...prev, [taskId]: false }));
     }
   };
 
@@ -529,11 +367,6 @@ const DashboardPage = () => {
                 <p className="mt-2 text-base font-semibold text-white">
                   {upcomingTask.title}
                 </p>
-                {upcomingTask.project && (
-                  <p className="text-xs uppercase tracking-wide text-white/70">
-                    Dự án: {upcomingTask.project}
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -582,15 +415,6 @@ const DashboardPage = () => {
                   const start = formatVietnamTime(task.startTime);
                   const end = formatVietnamTime(task.endTime);
                   const isCompleted = task.isCompleted;
-                  const subTasks = task.subTasks || [];
-                  const completedSubTasks = subTasks.filter((subTask) => subTask.isCompleted).length;
-                  const hasSubTasks = subTasks.length > 0;
-                  const progressNoteDraft = progressNoteDrafts[task._id] ?? "";
-                  const isSavingNote = Boolean(noteSaving[task._id]);
-                  const noteMessage = noteFeedback[task._id];
-                  const isSubTaskUpdating = Boolean(subTaskUpdating[task._id]);
-                  const noteChanged =
-                    progressNoteDraft.trim() !== (task.progressNote || "").trim();
                   return (
                     <li key={task._id} className="relative pl-6">
                       <span
@@ -604,140 +428,48 @@ const DashboardPage = () => {
                         {index + 1}
                       </span>
                       <div className="rounded-3xl bg-white/90 p-4 shadow-[0_12px_35px_-22px_rgba(15,23,42,0.6)] transition hover:shadow-[0_20px_50px_-25px_rgba(37,99,235,0.55)] dark:bg-slate-900/80">
-                        <div className="flex flex-col gap-4">
-                          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div className="space-y-2">
-                              <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
-                                {start} – {end}
-                              </p>
-                              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
-                                {task.title}
-                              </h3>
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
-                                {task.project && (
-                                  <span className="rounded-full bg-primary/10 px-3 py-1 font-semibold text-primary dark:bg-primary/15 dark:text-primary-light">
-                                    Dự án: {task.project}
-                                  </span>
-                                )}
-                                {hasSubTasks && (
-                                  <span className="rounded-full bg-amber-200/30 px-3 py-1 font-semibold text-amber-700 dark:bg-amber-300/20 dark:text-amber-200">
-                                    Checklist {completedSubTasks}/{subTasks.length}
-                                  </span>
-                                )}
-                                {isCompleted && (
-                                  <span className="rounded-full bg-emerald-500/15 px-3 py-1 font-semibold text-emerald-600 dark:text-emerald-300">
-                                    Hoàn tất
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                              <label className="rainbow-checkbox">
-                                <input
-                                  type="checkbox"
-                                  className="rainbow-checkbox__input"
-                                  checked={task.isCompleted}
-                                  onChange={(event) =>
-                                    handleToggleComplete(task._id, event.target.checked)
-                                  }
-                                  aria-label={`Đánh dấu hoàn thành nhiệm vụ ${task.title}`}
-                                  disabled={isSubTaskUpdating}
-                                />
-                                <span className="rainbow-checkbox__box" aria-hidden />
-                                <span>Đánh dấu hoàn thành</span>
-                              </label>
-                              <button
-                                type="button"
-                                className="rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-primary-light dark:text-primary-light dark:hover:bg-primary-light dark:hover:text-slate-900"
-                                onClick={() => openGoalModal(task)}
-                              >
-                                Bắt đầu phiên
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteTask(task._id)}
-                                className="rounded-full border border-red-300 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-600"
-                              >
-                                Xóa
-                              </button>
-                            </div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="space-y-1">
+                            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
+                              {start} – {end}
+                            </p>
+                            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                              {task.title}
+                            </h3>
+                            {isCompleted && (
+                              <span className="inline-block rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                Hoàn tất
+                              </span>
+                            )}
                           </div>
-
-                          {hasSubTasks && (
-                            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900/70 dark:text-slate-200">
-                              <div className="mb-2 flex items-center justify-between">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-                                  Checklist tiến độ
-                                </p>
-                                <p className="text-xs font-semibold text-primary dark:text-primary-light">
-                                  {completedSubTasks}/{subTasks.length} hạng mục
-                                </p>
-                              </div>
-                              <ul className="space-y-2">
-                                {subTasks.map((subTask) => (
-                                  <li key={subTask._id} className="flex items-start gap-3">
-                                    <input
-                                      type="checkbox"
-                                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary dark:border-slate-600"
-                                      checked={subTask.isCompleted}
-                                      disabled={isSubTaskUpdating}
-                                      onChange={(event) =>
-                                        handleToggleSubTask(task._id, subTask._id, event.target.checked)
-                                      }
-                                    />
-                                    <span
-                                      className={[
-                                        "text-sm",
-                                        subTask.isCompleted
-                                          ? "line-through text-slate-400 dark:text-slate-500"
-                                          : "text-slate-600 dark:text-slate-200"
-                                      ].join(" ")}
-                                    >
-                                      {subTask.title}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                              {isSubTaskUpdating && (
-                                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                                  Đang cập nhật checklist...
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-200">
-                            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">
-                              Ghi chú tiến độ
-                            </label>
-                            <textarea
-                              className="min-h-[72px] w-full resize-none rounded-xl border border-slate-200 bg-white/80 p-3 text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100"
-                              value={progressNoteDraft}
-                              onChange={(event) =>
-                                handleProgressNoteChange(task._id, event.target.value)
-                              }
-                              onBlur={() => {
-                                if (noteChanged && !isSavingNote) {
-                                  handleSaveProgressNote(task._id);
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <label className="rainbow-checkbox">
+                              <input
+                                type="checkbox"
+                                className="rainbow-checkbox__input"
+                                checked={task.isCompleted}
+                                onChange={(event) =>
+                                  handleToggleComplete(task._id, event.target.checked)
                                 }
-                              }}
-                              placeholder="Ghi lại phần việc bạn đã hoàn thành hoặc vướng mắc cần lưu ý..."
-                            />
-                            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-                              <button
-                                type="button"
-                                onClick={() => handleSaveProgressNote(task._id)}
-                                className="rounded-full border border-slate-200 px-3 py-1 font-semibold text-slate-600 transition hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:text-slate-200"
-                                disabled={isSavingNote || !noteChanged}
-                              >
-                                {isSavingNote ? "Đang lưu..." : "Lưu ghi chú"}
-                              </button>
-                              {noteMessage && (
-                                <span className="text-xs font-medium text-slate-600 dark:text-slate-200">
-                                  {noteMessage}
-                                </span>
-                              )}
-                            </div>
+                                aria-label={`Đánh dấu hoàn thành nhiệm vụ ${task.title}`}
+                              />
+                              <span className="rainbow-checkbox__box" aria-hidden />
+                              <span>Đánh dấu hoàn thành</span>
+                            </label>
+                            <button
+                              type="button"
+                              className="rounded-full border border-primary px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-primary-light dark:text-primary-light dark:hover:bg-primary-light dark:hover:text-slate-900"
+                              onClick={() => openGoalModal(task)}
+                            >
+                              Bắt đầu phiên
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTask(task._id)}
+                              className="rounded-full border border-red-300 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 dark:border-red-600 dark:text-red-300 dark:hover:bg-red-600"
+                            >
+                              Xóa
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -792,134 +524,28 @@ const DashboardPage = () => {
 
                 <div>
                   <label
-                    htmlFor="task-project"
+                    htmlFor="task-startTime"
                     className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                   >
-                    Dự án (tùy chọn)
+                    Bắt đầu
                   </label>
                   <input
-                    id="task-project"
-                    name="project"
-                    value={taskForm.project}
+                    id="task-startTime"
+                    name="startTime"
+                    type="time"
+                    value={taskForm.startTime}
                     onChange={handleTaskFormChange}
                     className="input-field bg-white/95 dark:bg-slate-900/80"
-                    placeholder="Ví dụ: Chiến dịch Q4"
+                    aria-invalid={Boolean(taskFormErrors.startTime)}
+                    aria-describedby={
+                      taskFormErrors.startTime ? "task-startTime-error" : undefined
+                    }
                   />
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="task-startTime"
-                      className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
-                    >
-                      Bắt đầu
-                    </label>
-                    <input
-                      id="task-startTime"
-                      name="startTime"
-                      type="time"
-                      value={taskForm.startTime}
-                      onChange={handleTaskFormChange}
-                      className="input-field bg-white/95 dark:bg-slate-900/80"
-                      aria-invalid={Boolean(taskFormErrors.startTime)}
-                      aria-describedby={
-                        taskFormErrors.startTime ? "task-startTime-error" : undefined
-                      }
-                    />
-                    {taskFormErrors.startTime && (
-                      <p id="task-startTime-error" className="mt-1 text-sm text-red-600">
-                        {taskFormErrors.startTime}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="task-endTime"
-                      className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
-                    >
-                      Kết thúc
-                    </label>
-                    <input
-                      id="task-endTime"
-                      name="endTime"
-                      type="time"
-                      value={taskForm.endTime}
-                      onChange={handleTaskFormChange}
-                      className="input-field bg-white/95 dark:bg-slate-900/80"
-                      aria-invalid={Boolean(taskFormErrors.endTime)}
-                      aria-describedby={
-                        taskFormErrors.endTime ? "task-endTime-error" : undefined
-                      }
-                    />
-                    {taskFormErrors.endTime && (
-                      <p id="task-endTime-error" className="mt-1 text-sm text-red-600">
-                        {taskFormErrors.endTime}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:bg-slate-900/60 dark:text-slate-200">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                      Checklist nhỏ (tùy chọn)
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={handleAddSubTaskField}
-                      className="text-xs font-semibold text-primary transition hover:underline disabled:cursor-not-allowed disabled:opacity-60 dark:text-primary-light"
-                      disabled={taskForm.subTasks.length >= MAX_SUBTASKS_PER_TASK}
-                    >
-                      + Thêm hạng mục
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {taskForm.subTasks.map((subTask, index) => (
-                      <div key={subTask.id} className="flex items-center gap-3">
-                        <input
-                          type="text"
-                          value={subTask.title}
-                          onChange={(event) =>
-                            handleTaskSubTaskChange(subTask.id, event.target.value)
-                          }
-                          placeholder={`Hạng mục ${index + 1}`}
-                          className="input-field flex-1 bg-white/95 dark:bg-slate-900/80"
-                        />
-                        {taskForm.subTasks.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSubTaskField(subTask.id)}
-                            className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-red-300 hover:text-red-500 dark:border-slate-600 dark:text-slate-300 dark:hover:border-red-400 dark:hover:text-red-300"
-                          >
-                            Xóa
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                    Tạo các bước nhỏ để theo dõi phần công việc đã hoàn thành.
-                  </p>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="task-progress-note"
-                    className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-200"
-                  >
-                    Ghi chú tiến độ ban đầu (tùy chọn)
-                  </label>
-                  <textarea
-                    id="task-progress-note"
-                    name="progressNote"
-                    rows="3"
-                    value={taskForm.progressNote}
-                    onChange={handleTaskFormChange}
-                    className="input-field resize-none bg-white/95 dark:bg-slate-900/80"
-                    placeholder="Bạn muốn hoàn thành phần nào? Cần lưu ý điều gì?"
-                  />
+                  {taskFormErrors.startTime && (
+                    <p id="task-startTime-error" className="mt-1 text-sm text-red-600">
+                      {taskFormErrors.startTime}
+                    </p>
+                  )}
                 </div>
 
                 <button
@@ -1065,19 +691,19 @@ const DashboardPage = () => {
                     <strong className="block text-primary-dark dark:text-primary-light">
                       1. Lịch thông minh
                     </strong>
-                    Lên kế hoạch Deep Work theo khung giờ vàng và theo dõi tiến độ hằng ngày.
+                    Lên kế hoạch Deep Work theo khung giờ và theo dõi tiến độ hằng ngày.
                   </li>
                   <li className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/60">
                     <strong className="block text-emerald-600 dark:text-emerald-300">
                       2. Không Gian Tập Trung
                     </strong>
-                    Không gian chuyên biệt với đồng hồ đếm ngược, ghi chú nhanh, tạm dừng và ghi dấu xao nhãng.
+                    Đồng hồ đếm ngược, ghi chú nhanh và kết thúc phiên — không thêm gì làm phân tâm.
                   </li>
                   <li className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/60">
                     <strong className="block text-indigo-600 dark:text-indigo-300">
-                      3. Thống kê & Game hóa
+                      3. Thống kê & AI
                     </strong>
-                    Khai thác số liệu, streak, huy hiệu và gợi ý AI để tối ưu nhịp làm việc dài hạn.
+                    Streak, heatmap, focus windows và gợi ý AI để tối ưu nhịp học tập dài hạn.
                   </li>
                 </ul>
                 <div className="mt-6 flex justify-end">

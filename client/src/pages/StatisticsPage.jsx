@@ -113,10 +113,14 @@ const StatisticsPage = () => {
           </p>
         </div>
         <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200">
-          <p className="text-sm font-semibold">Điểm tập trung</p>
-          <p className="mt-2 text-3xl font-bold">{metrics.totalPoints}</p>
+          <p className="text-sm font-semibold">Mức tập trung trung bình</p>
+          <p className="mt-2 text-3xl font-bold">
+            {metrics.averageRating != null ? `${metrics.averageRating} / 5` : "—"}
+          </p>
           <p className="text-xs">
-            Trung bình đánh giá: {metrics.averageRating ?? "Chưa có"}
+            {metrics.averageRating != null
+              ? `★`.repeat(Math.round(metrics.averageRating)) + ` (${metrics.completedSessions} phiên)`
+              : "Chưa có phiên nào được đánh giá"}
           </p>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
