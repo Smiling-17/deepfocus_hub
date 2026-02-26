@@ -213,7 +213,8 @@ const DashboardPage = () => {
     setGoalForm({
       taskId: task?._id || null,
       goal: task ? `Hoàn thành: ${task.title}` : "",
-      durationMinutes: 50
+      durationMinutes: 50,
+      youtubeUrl: ""
     });
     setGoalError("");
     setShowGoalModal(true);

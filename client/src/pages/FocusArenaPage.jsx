@@ -42,6 +42,7 @@ const YouTubePlayer = ({ videoId, className = "" }) => {
 ───────────────────────────────────────────────────────────────────────────── */
 const TimerExperience = ({
   immersive,
+  hasVideo,
   session,
   remainingSeconds,
   completionPercent,
@@ -53,10 +54,14 @@ const TimerExperience = ({
 }) => {
   const articleClass = immersive
     ? "relative flex h-[90vh] w-full max-w-[60rem] flex-col items-center justify-between overflow-hidden rounded-[48px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_50px_120px_-60px_rgba(15,23,42,0.9)]"
-    : "relative flex min-h-[32rem] flex-1 flex-col items-center justify-between overflow-hidden rounded-[40px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_40px_85px_-45px_rgba(15,23,42,0.85)]";
+    : hasVideo
+      ? "relative flex min-h-[20rem] xl:min-h-[32rem] flex-1 flex-col items-center justify-between overflow-hidden rounded-[28px] xl:rounded-[40px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_40px_85px_-45px_rgba(15,23,42,0.85)]"
+      : "relative flex min-h-[32rem] flex-1 flex-col items-center justify-between overflow-hidden rounded-[40px] bg-gradient-to-br from-primary via-indigo-600 to-slate-900 text-white shadow-[0_40px_85px_-45px_rgba(15,23,42,0.85)]";
   const timerClass = immersive
     ? "relative mx-auto flex flex-shrink-0 w-[min(46rem,55vh)] h-[min(46rem,55vh)] items-center justify-center"
-    : "relative mx-auto flex aspect-square w-full max-w-[34rem] items-center justify-center sm:max-w-[38rem]";
+    : hasVideo
+      ? "relative mx-auto flex aspect-square w-full max-w-[14rem] sm:max-w-[18rem] xl:max-w-[34rem] items-center justify-center"
+      : "relative mx-auto flex aspect-square w-full max-w-[34rem] items-center justify-center sm:max-w-[38rem]";
 
   return (
     <article className={articleClass}>
@@ -73,20 +78,20 @@ const TimerExperience = ({
         </button>
       </div>
 
-      <header className={`relative z-10 flex w-full flex-col items-center gap-4 px-6 text-center sm:px-10 ${immersive ? "pt-8" : "pt-16"}`}>
-        <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-xs uppercase tracking-[0.4em] text-cyan-100 backdrop-blur">
+      <header className={`relative z-10 flex w-full flex-col items-center gap-2 xl:gap-4 px-4 xl:px-10 text-center ${immersive ? "pt-8" : hasVideo ? "pt-6 xl:pt-16" : "pt-16"}`}>
+        <span className={`inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs uppercase tracking-[0.4em] text-cyan-100 backdrop-blur ${hasVideo ? "hidden xl:inline-flex" : ""}`}>
           KHÔNG GIAN TẬP TRUNG
         </span>
-        <h1 className="text-balance text-3xl font-bold leading-snug drop-shadow-lg sm:text-4xl">
+        <h1 className={`text-balance font-bold leading-snug drop-shadow-lg ${hasVideo ? "text-lg sm:text-xl xl:text-4xl" : "text-3xl sm:text-4xl"}`}>
           {session.goal}
         </h1>
-        <p className="text-sm text-white/70">
+        <p className={`text-white/70 ${hasVideo ? "text-xs xl:text-sm" : "text-sm"}`}>
           Thời lượng phiên: {session.durationSet} phút · Bắt đầu lúc{" "}
           {formatVietnamTime(session.startTime)}
         </p>
       </header>
 
-      <div className={`relative z-10 flex w-full flex-1 items-center justify-center px-6 ${immersive ? "pb-6" : "pb-12"}`}>
+      <div className={`relative z-10 flex w-full flex-1 items-center justify-center px-4 xl:px-6 ${immersive ? "pb-6" : hasVideo ? "py-3 xl:pb-12" : "pb-12"}`}>
         <div className={timerClass}>
           <div
             className="absolute inset-0 rounded-full p-2 shadow-[0_0_60px_rgba(14,116,144,0.45)]"
@@ -94,11 +99,11 @@ const TimerExperience = ({
             aria-hidden="true"
           >
             <div className="flex h-full w-full items-center justify-center rounded-full bg-slate-950/70 backdrop-blur-xl shadow-[inset_0_35px_60px_-25px_rgba(0,0,0,0.65)]">
-              <div className="flex flex-col items-center justify-center gap-4">
-                <span className="text-[clamp(3.5rem,9vw,6.5rem)] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_15px_35px_rgba(15,23,42,0.55)] sm:text-[clamp(4rem,8vw,7.5rem)]">
+              <div className="flex flex-col items-center justify-center gap-2 xl:gap-4">
+                <span className={`font-black tabular-nums leading-none tracking-tight drop-shadow-[0_15px_35px_rgba(15,23,42,0.55)] ${hasVideo ? "text-[clamp(2rem,8vw,3.5rem)] xl:text-[clamp(3.5rem,9vw,6.5rem)]" : "text-[clamp(3.5rem,9vw,6.5rem)] sm:text-[clamp(4rem,8vw,7.5rem)]"}`}>
                   {formatTimer(remainingSeconds)}
                 </span>
-                <span className="rounded-full bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-white/70">
+                <span className={`rounded-full bg-white/10 px-3 py-1 font-semibold uppercase tracking-[0.3em] text-white/70 ${hasVideo ? "text-[0.55rem] xl:text-xs" : "text-xs"}`}>
                   Thời gian còn lại
                 </span>
               </div>
@@ -107,7 +112,7 @@ const TimerExperience = ({
         </div>
       </div>
 
-      <div className="relative z-10 flex w-full items-center justify-center px-6 pb-10">
+      <div className={`relative z-10 flex w-full items-center justify-center px-6 ${hasVideo ? "pb-4 xl:pb-10" : "pb-10"}`}>
         <button
           type="button"
           onClick={() => onCompleteSession(false)}
@@ -351,6 +356,7 @@ const FocusArenaPage = () => {
 
   const timerProps = {
     session,
+    hasVideo,
     remainingSeconds,
     completionPercent,
     timerRingStyle,
@@ -366,12 +372,12 @@ const FocusArenaPage = () => {
   if (isImmersive) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-2xl">
-        <div className={`flex w-full max-w-[90rem] items-center justify-center gap-6 ${hasVideo ? "flex-col xl:flex-row" : ""}`}>
+        <div className={`flex w-full max-w-[100rem] items-center justify-center gap-6 ${hasVideo ? "flex-col xl:flex-row" : ""}`}>
           <div className={hasVideo ? "w-full xl:flex-1" : "w-full"}>
             <TimerExperience immersive {...timerProps} />
           </div>
           {hasVideo && (
-            <aside className="flex w-full flex-col gap-4 xl:w-[28rem] xl:max-w-[28rem]">
+            <div className="flex w-full flex-col gap-4 xl:flex-1">
               <section className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur">
                 <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3">
                   <span className="text-sm font-semibold text-white/90">🎬 Video đang phát</span>
@@ -380,7 +386,7 @@ const FocusArenaPage = () => {
                   <YouTubePlayer videoId={session.youtubeVideoId} />
                 </div>
               </section>
-            </aside>
+            </div>
           )}
         </div>
       </div>
@@ -389,12 +395,12 @@ const FocusArenaPage = () => {
 
   // ── Normal layout ─────────────────────────────────────────────────────────
   return (
-    <section className={`grid flex-1 gap-8 ${hasVideo ? "grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem]" : "grid-cols-1"}`}>
+    <section className={`grid flex-1 gap-8 ${hasVideo ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1"}`}>
       <TimerExperience immersive={false} {...timerProps} />
 
       {hasVideo && (
-        <aside className="flex w-full flex-col gap-6 xl:w-[22rem] xl:max-w-[22rem]">
-          <section className="glass-panel space-y-3">
+        <div className="flex w-full flex-col gap-6">
+          <section className="glass-panel flex flex-col gap-4">
             <header>
               <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
                 🎬 Video đang phát
@@ -405,7 +411,7 @@ const FocusArenaPage = () => {
             </header>
             <YouTubePlayer videoId={session.youtubeVideoId} />
           </section>
-        </aside>
+        </div>
       )}
     </section>
   );
