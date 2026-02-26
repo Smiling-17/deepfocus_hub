@@ -265,7 +265,7 @@ const DashboardPage = () => {
   return (
     <>
       <section className="flex flex-1 flex-col gap-8">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-indigo-900 to-slate-900 text-white shadow-glow">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-blue-900/80 to-slate-900 text-white shadow-lg border border-blue-500/20">
           <div
             className="absolute inset-0 opacity-30 md:opacity-40"
             style={{
