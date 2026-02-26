@@ -293,10 +293,22 @@ export const generateInsights = async (req, res, next) => {
 
     return res.json({ suggestion, generatedAt: dayjs().toDate() });
   } catch (error) {
-    // Xử lý lỗi xác thực Gemini API
+    // 429 — Quota exceeded / rate limit
+    if (error.status === 429) {
+      return res.status(503).json({
+        message: "Dịch vụ AI đang vượt quá hạn mức sử dụng. Vui lòng thử lại sau vài phút."
+      });
+    }
+    // 400 / 403 — API key sai hoặc chưa enable
     if (error.status === 400 || error.status === 403) {
       return res.status(503).json({
-        message: "Không thể kết nối tới Gemini API. Vui lòng kiểm tra lại API key."
+        message: "Không thể kết nối tới Gemini API. Vui lòng kiểm tra lại API key và billing trên Google Cloud."
+      });
+    }
+    // Lỗi Gemini khác (network, timeout...) — tránh lộ raw JSON ra client
+    if (error.message?.includes("generativelanguage.googleapis.com") || error.message?.includes("GoogleGenerativeAI")) {
+      return res.status(503).json({
+        message: "Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau."
       });
     }
     next(error);
